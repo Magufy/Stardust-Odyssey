@@ -227,10 +227,10 @@ class Ship:
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.angle = 0
         self.bullets = []
-        self.velocity_haut=0
-        self.velocity_bas=0
-        self.velocity_droite=0
-        self.velocity_gauche=0
+        self.volicite_haut=0
+        self.volicite_bas=0
+        self.volicite_droite=0
+        self.volicite_gauche=0
         
 
         # Stats base :
@@ -263,36 +263,34 @@ class Ship:
     def move(self):
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_z] and self.velocity_haut < 1:  # Avancer
-            self.velocity_haut += 0.02
-        if keys[pygame.K_s] and self.velocity_bas < 1:  # Reculer
-            self.velocity_bas += 0.02     
-        if keys[pygame.K_q] and self.velocity_gauche < 1:  # Gauche
-            self.velocity_gauche += 0.02           
-        if keys[pygame.K_d] and self.velocity_droite < 1:  # Droite
-            self.velocity_droite += 0.02
+        if keys[pygame.K_z] and self.volicite_haut < 1:  # Avancer
+            self.volicite_haut += 0.02
+        if keys[pygame.K_s] and self.volicite_bas < 1:  # Reculer
+            self.volicite_bas += 0.02     
+        if keys[pygame.K_q] and self.volicite_gauche < 1:  # Gauche
+            self.volicite_gauche += 0.02           
+        if keys[pygame.K_d] and self.volicite_droite < 1:  # Droite
+            self.volicite_droite += 0.02
 
-        if self.velocity_haut > 0 :
-                self.rect.y -= self.velocity_haut* self.speed
-        if self.velocity_bas > 0 :
-                self.rect.y += self.velocity_bas* self.speed
-        if self.velocity_gauche > 0 :
-                self.rect.x -= self.velocity_gauche* self.speed
-        if self.velocity_droite > 0 :
-                self.rect.x += self.velocity_droite* self.speed
+        if self.volicite_haut > 0 :
+                self.rect.y -= self.volicite_haut* self.speed
+        if self.volicite_bas > 0 :
+                self.rect.y += self.volicite_bas* self.speed
+        if self.volicite_gauche > 0 :
+                self.rect.x -= self.volicite_gauche* self.speed
+        if self.volicite_droite > 0 :
+                self.rect.x += self.volicite_droite* self.speed
 
-        if self.velocity_haut > 0 and not keys[pygame.K_z]:
-            self.velocity_haut -= 0.01
-        if self.velocity_bas > 0 and not keys[pygame.K_s]:
-            self.velocity_bas -= 0.01
-        if self.velocity_gauche > 0 and not keys[pygame.K_q]:
-            self.velocity_gauche -= 0.01
-        if self.velocity_droite > 0 and not keys[pygame.K_d]:
-            self.velocity_droite -= 0.01
+        if self.volicite_haut > 0 and not keys[pygame.K_z]:
+            self.volicite_haut -= 0.01
+        if self.volicite_bas > 0 and not keys[pygame.K_s]:
+            self.volicite_bas -= 0.01
+        if self.volicite_gauche > 0 and not keys[pygame.K_q]:
+            self.volicite_gauche -= 0.01
+        if self.volicite_droite > 0 and not keys[pygame.K_d]:
+            self.volicite_droite -= 0.01
 
-
-
-
+        #TD de bord à bord de l'écran
         if self.rect.x <= 0 :
             self.rect.x = WIDTH-5
             self.health-=5
