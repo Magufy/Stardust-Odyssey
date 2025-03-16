@@ -762,7 +762,7 @@ def spawn_wave(wave_number):
         enemies.append(enemy_class())
     return enemies
 
-def show_shop(player):
+def shop_upgrades(player):
     all_upgrades = [
         {"name": "Health Up", "effect": "Max Health +20",
          "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
@@ -971,7 +971,7 @@ def game_loop(selected_skin):
         # Spawn new wave when all enemies are defeated
         if len(enemies) == 0:
             wave_number += 1
-            if not show_shop(player_ship):
+            if not shop_upgrades(player_ship):
                 running = False
                 break
             enemies = spawn_wave(wave_number)
