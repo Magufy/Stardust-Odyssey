@@ -4,7 +4,6 @@ import math
 import sys
 import json
 
-# Initialisation de Pygame
 pygame.init()
 
 # Paramètres de la fenêtre en plein écran
