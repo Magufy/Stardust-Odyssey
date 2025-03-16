@@ -22,7 +22,7 @@ GOLD = (212,174,55)
 GRAY = (128, 128, 128)
 BLACK = (0, 0, 0)
 
-selected_ship = None
+selected_ship = "Vaisseau Basique"
 
 # Police
 font = pygame.font.Font(None, 36)
@@ -38,16 +38,24 @@ def save_data(credits, selected_skin, skins):
 
 # Fonction pour charger les données
 def load_data():
+
     try:
         with open("save_data.json", "r") as file:
             data = json.load(file)
+
+             # Vérifier si selected_skin est bien un dictionnaire
+            selected_skin = data.get("selected_skin", None)
+            if isinstance(selected_skin, dict) and "preview_color" in selected_skin:
+                selected_skin["preview_color"] = tuple(selected_skin["preview_color"])
+
             return (
-                data.get("credits", 5000),  # Crédits par défaut
-                data.get("selected_skin", None),  # Skin sélectionné par défaut
+                data.get("credits", 5000),  # Crédits par défaut           
+                selected_skin,  # Skin sélectionné par défaut
                 data.get("skins", [])  # Skins débloqués par défaut
-            )
+                )
+            
     except FileNotFoundError:
-        return 5000, None, []  # Valeurs par défaut si le fichier n'existe pas
+        return 5000, None, []  # Valeurs par défaut si le fichier n'existe pas           
 
 class Button:
     def __init__(self, x, y, width, height, text, color):
@@ -212,14 +220,18 @@ class Shop:
 
 
 class Ship:
-    def __init__(self, selected_skin="basicship?"):
+    def __init__(self, selected_skin="Vaisseau Basique"):
         self.image = pygame.Surface((40, 40), pygame.SRCALPHA)
-        skin_color = selected_skin["preview_color"]   # Appliquer la couleur du skin
-        pygame.draw.polygon(self.image, skin_color, [(20, 0), (0, 40), (40, 40)])
+        pygame.draw.polygon(self.image, BLUE, [(20, 0), (0, 40), (40, 40)])
         self.original_image = self.image
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.angle = 0
         self.bullets = []
+        self.velocity_haut=0
+        self.velocity_bas=0
+        self.velocity_droite=0
+        self.velocity_gauche=0
+        
 
         # Stats base :
         self.speed = 5
@@ -251,20 +263,48 @@ class Ship:
     def move(self):
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_z]:  # Avancer
-            self.rect.y -= self.speed
-        if keys[pygame.K_s]:  # Reculer
-            self.rect.y += self.speed
-        if keys[pygame.K_q]:  # Gauche
-            self.rect.x -= self.speed
-        if keys[pygame.K_d]:  # Droite
-            self.rect.x += self.speed
+        if keys[pygame.K_z] and self.velocity_haut < 1:  # Avancer
+            self.velocity_haut += 0.02
+        if keys[pygame.K_s] and self.velocity_bas < 1:  # Reculer
+            self.velocity_bas += 0.02     
+        if keys[pygame.K_q] and self.velocity_gauche < 1:  # Gauche
+            self.velocity_gauche += 0.02           
+        if keys[pygame.K_d] and self.velocity_droite < 1:  # Droite
+            self.velocity_droite += 0.02
 
-        # Limiter les bords de l'écran
-        if self.rect.left < 0: self.rect.left = 0
-        if self.rect.right > WIDTH: self.rect.right = WIDTH
-        if self.rect.top < 0: self.rect.top = 0
-        if self.rect.bottom > HEIGHT: self.rect.bottom = HEIGHT
+        if self.velocity_haut > 0 :
+                self.rect.y -= self.velocity_haut* self.speed
+        if self.velocity_bas > 0 :
+                self.rect.y += self.velocity_bas* self.speed
+        if self.velocity_gauche > 0 :
+                self.rect.x -= self.velocity_gauche* self.speed
+        if self.velocity_droite > 0 :
+                self.rect.x += self.velocity_droite* self.speed
+
+        if self.velocity_haut > 0 and not keys[pygame.K_z]:
+            self.velocity_haut -= 0.01
+        if self.velocity_bas > 0 and not keys[pygame.K_s]:
+            self.velocity_bas -= 0.01
+        if self.velocity_gauche > 0 and not keys[pygame.K_q]:
+            self.velocity_gauche -= 0.01
+        if self.velocity_droite > 0 and not keys[pygame.K_d]:
+            self.velocity_droite -= 0.01
+
+
+
+
+        if self.rect.x <= 0 :
+            self.rect.x = WIDTH-5
+            self.health-=5
+        if self.rect.x >= WIDTH :
+            self.rect.x = 5
+            self.health-=5
+        if self.rect.y <= 0 :
+            self.rect.y = HEIGHT-5
+            self.health-=5
+        if self.rect.y >= HEIGHT :
+            self.rect.y = 5
+            self.health-=5
 
     def rotate_to_mouse(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -364,6 +404,7 @@ class VaisseauPierre(Ship):
         self.regen_rate+=5
         self.body_damage=20
         self.damage=1    
+        pygame.draw.polygon(self.image, (50, 20, 55), [(20, 0), (0, 40), (40, 40)])
 
 class VaisseauPlasma(Ship):
     def __init__(self):
@@ -383,6 +424,7 @@ class VaisseauEmeraude(Ship) :
         self.wall_bounces+=3
         self.range+=2700
         self.speed-=0.4
+        pygame.draw.polygon(self.image, (15, 250, 30), [(20, 0), (0, 40), (40, 40)])
 
 class VaisseauAmethyste(Ship):
     def __init__(self):
@@ -393,6 +435,7 @@ class VaisseauAmethyste(Ship):
         self.bullet_speed+=5
         self.reload_speed+=0.5
         self.damage-=2
+        pygame.draw.polygon(self.image, (250, 15, 255), [(20, 0), (0, 40), (40, 40)])
 
 class VaisseauDiamant(Ship):
     def __init__(self):
@@ -1008,6 +1051,6 @@ def show_game_over(score, credits_earned):
     pygame.display.flip()
 
 
-# Créer une instance de Shop et exécuter la boucle principale
+# Créer le Shop et exécuter la boucle principale
 shop = Shop()
 shop.run(window)
