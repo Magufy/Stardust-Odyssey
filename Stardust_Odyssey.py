@@ -599,10 +599,10 @@ class Enemy:
         return False
 
     def update(self, player):
-        pass  # To be implemented by subclasses
+        pass  # subclasse
 
     def move_towards(self, player):
-        pass  # To be implemented by subclasses
+        pass  # subclasse
 
 class BasicEnemy(Enemy):
     def __init__(self):
@@ -964,11 +964,11 @@ def game_loop(selected_skin):
             enemy.move_towards(player_ship)
             enemy.draw(window)
 
-            if enemy.check_collision(player_ship):
-                if player_ship.health <= 0:
-                    running = False
-                    show_game_over(score, credits_earned)
-                    break
+            enemy.check_collision(player_ship)
+            if player_ship.health <= 0:
+                running = False
+                show_game_over(score, credits_earned)
+                break
 
         # Spawn new wave when all enemies are defeated
         if len(enemies) == 0:
