@@ -1051,6 +1051,6 @@ def show_game_over(score, credits_earned):
     pygame.display.flip()
 
 
-# Créer le Shop et exécuter la boucle principale
+# Crée le Shop et exécute la boucle principale
 shop = Shop()
 shop.run(window)
