@@ -1,4 +1,11 @@
 # Stardust-Odyssey
+
+Magufy -- Martin
+Poufi -- François
+Aviation -- Zima
+
+
+
 STARDUST ODYSSEY
 Description
 Plongez dans un rogue-lite spatial où vous prenez les commandes d’un vaisseau évolutif, affrontant des vagues d’ennemis et des boss redoutables à la difficulté croissante. Inspiré par Nova Drift et Bounty of One, ce jeu met l’accent sur une progression dynamique et stratégique, où chaque partie est unique. Développez votre vaisseau grâce à des améliorations, surmontez des défis toujours plus exigeants et testez vos réflexes dans un univers galactique en perpétuel danger.
