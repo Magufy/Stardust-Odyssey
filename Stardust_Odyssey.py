@@ -515,13 +515,11 @@ class Bullet:
         self.wall_bounces -= 1
 
     def bounce_off_enemy(self, enemy_x, enemy_y):
-        # Calculate angle away from enemy
         dx = self.x - enemy_x
         dy = self.y - enemy_y
         new_angle = math.atan2(dy, dx)
         self.angle = new_angle
 
-        # Move bullet away from enemy to prevent multiple hits
         safe_distance = max(50, self.speed * 2)
         self.x = enemy_x + safe_distance * math.cos(self.angle)
         self.y = enemy_y + safe_distance * math.sin(self.angle)
@@ -529,7 +527,6 @@ class Bullet:
 
 class Enemy:
     def __init__(self):
-        # Common attributes for all enemies
         self.x = 0
         self.y = 0
         self.health = 0
@@ -538,7 +535,6 @@ class Enemy:
         self.speed = 0
         self.color = WHITE
 
-        # Spawn position initialization
         edge = random.choice(["top", "bottom", "left", "right"])
         margin = 50
 
@@ -551,7 +547,7 @@ class Enemy:
         elif edge == "left":
             self.x = -margin
             self.y = random.randint(0, HEIGHT)
-        else:  # right
+        else:  # droite
             self.x = WIDTH + margin
             self.y = random.randint(0, HEIGHT)
 
@@ -569,12 +565,12 @@ class Enemy:
 
         distance = math.hypot(player.rect.centerx - self.x, player.rect.centery - self.y)
         if distance < self.radius + 20:
-            # Player takes damage reduced by shield
+            # degats - shield
             damage_to_player = self.damage * (1 - player.shield / 100)
             player.health -= damage_to_player
             player.invincible_time = 60
         
-             # Damage nearby enemies
+             # degats autour de lui
             for enemy in enemies[:]:
                 distance = math.hypot(self.x - enemy.x, self.y - enemy.y)
                 if distance <= 100:
@@ -584,9 +580,7 @@ class Enemy:
 
             explosion_surface = pygame.Surface((200,200), pygame.SRCALPHA)
 
-            # Calculate alpha based on remaining time
-            alpha = 30
-            pygame.draw.circle(explosion_surface, (100, 200, 255, alpha),
+            pygame.draw.circle(explosion_surface, (100, 200, 255,30),
                             (player.explosion_radius, player.explosion_radius),
                                     player.explosion_radius, 2)
             window.blit(explosion_surface,
@@ -599,10 +593,10 @@ class Enemy:
         return False
 
     def update(self, player):
-        pass  # subclasse
+        pass  # sous classe
 
     def move_towards(self, player):
-        pass  # subclasse
+        pass  # sous classe
 
 class BasicEnemy(Enemy):
     def __init__(self):
@@ -612,6 +606,7 @@ class BasicEnemy(Enemy):
         self.health = 20
         self.damage = 10
         self.color = RED
+        self.type= [BasicEnemy]
 
     def move_towards(self, player):
         dx = player.rect.centerx - self.x
@@ -636,6 +631,7 @@ class TankEnemy(Enemy):
         self.health = 40
         self.damage = 20
         self.color = YELLOW
+        self.type= [TankEnemy]
 
     def move_towards(self, player):
         dx = player.rect.centerx - self.x
@@ -660,16 +656,15 @@ class ShooterEnemy(Enemy):
         self.health = 30
         self.damage = 15
         self.color = GREEN
+        self.type= [ShooterEnemy]
 
-        # Shooting attributes
         self.shoot_cooldown = 0
         self.shoot_delay = random.randint(60, 120)
         self.projectiles = []
-
-        # Movement attributes
+    
         self.target_x = 0
         self.target_y = 0
-        self.stationary_time = 300  # 5 seconds at 60 FPS
+        self.stationary_time = 300  
         self.stationary_timer = 0
         self.is_moving = True
         self.pick_new_position()
@@ -685,24 +680,23 @@ class ShooterEnemy(Enemy):
             dy = self.target_y - self.y
             distance = math.hypot(dx, dy)
 
-            if distance < self.speed:  # Reached target
+            if distance < self.speed:  # est au point aleatoire
                 self.x = self.target_x
                 self.y = self.target_y
                 self.is_moving = False
                 self.stationary_timer = self.stationary_time
-            else:
-                # Move towards target
+            else: #va au point aleatoire
+
                 self.x += (dx / distance) * self.speed
                 self.y += (dy / distance) * self.speed
         else:
-            # Stationary and shooting
+
             self.stationary_timer -= 1
             if self.stationary_timer <= 0:
                 self.is_moving = True
                 self.pick_new_position()
             else:
                 # Only shoot when stationary
-                self.shoot_cooldown = max(0, self.shoot_cooldown - 1)
                 if self.shoot_cooldown == 0:
                     dx = player.rect.centerx - self.x
                     dy = player.rect.centery - self.y
@@ -748,13 +742,73 @@ class ShooterEnemy(Enemy):
                              (int(proj['x']), int(proj['y'])),
                              proj['radius'])
 
-# Update the spawn_wave function to use the new classes
+class LinkEnemy(Enemy):
+    def __init__(self):
+        super().__init__()
+        self.radius = 50
+        self.speed=1
+        self.health=100
+        self.damage=20
+        self.color = WHITE
+        self.type= [LinkEnemy]
+
+        self.projectiles = []
+
+        # Movement attributes
+        self.target_x = 0
+        self.target_y = 0
+        self.stationary_time = 150 
+        self.stationary_timer = 0
+        self.is_moving = True
+        self.pick_new_position()
+
+    def pick_new_position(self):
+        margin = 100
+        self.target_x = random.randint(margin, WIDTH - margin)
+        self.target_y = random.randint(margin, HEIGHT - margin)
+
+    def update(self, player):
+        if self.is_moving:
+            dx = self.target_x - self.x
+            dy = self.target_y - self.y
+            distance = math.hypot(dx, dy)
+
+            if distance < self.speed:  # est au point aleatoire
+                self.x = self.target_x
+                self.y = self.target_y
+                self.is_moving = False
+                self.stationary_timer = self.stationary_time
+            else:
+                # Va au point aleatoire
+                self.x += (dx / distance) * self.speed
+                self.y += (dy / distance) * self.speed
+                
+        else:
+            self.stationary_timer -= 1
+            if self.stationary_timer <= 0:
+                self.is_moving = True
+                self.pick_new_position()
+
+                           
+
+    def draw(self, window):
+        super().draw(window)
+
+        # laser                  
+        for other in enemies :
+            if other.type == [LinkEnemy] :
+                pygame.draw.line(window, (230,200,200),(self.x ,self.y ),(other.x,other.y),width=20)
+
+
 def spawn_wave(wave_number):
     enemies = []
     num_enemies = 3 + wave_number
 
-    # Calculate probabilities based on wave number
-    if wave_number < 5:
+    test=True
+    if test:
+        types=[BasicEnemy] * 10 + [TankEnemy] * 10 + [ShooterEnemy] * 10 + [LinkEnemy] * 70
+    
+    elif wave_number < 5:
         types = [BasicEnemy] * 70 + [TankEnemy] * 30
     else:
         types = [BasicEnemy] * 60 + [TankEnemy] * 25 + [ShooterEnemy] * 15
@@ -843,7 +897,7 @@ def shop_upgrades(player):
 def game_loop(selected_skin):
     global enemies
     player_ship = Ship(selected_skin)
-    enemies = spawn_wave(1)  # Start with wave 1
+    enemies = spawn_wave(1)  # lance la vague 1
     wave_number = 1
     score = 0
     credits_earned = 0  # Crédits gagnés pendant cette partie
@@ -883,17 +937,17 @@ def game_loop(selected_skin):
         player_ship.rotate_to_mouse()
         player_ship.draw(window)
 
-        # Update and draw bullets
+        # Update les balles
         for bullet in player_ship.bullets[:]:
             bullet.move()
             bullet.draw(window)
 
-            # Check if bullet has exceeded its range
+            # portée de la balle
             if bullet.distance_traveled >= bullet.max_range:
                 player_ship.bullets.remove(bullet)
                 continue
 
-            # Check for wall collisions
+            # colision au mur
             if bullet.x < 0:
                 if bullet.wall_bounces > 0:
                     bullet.x = 0
@@ -925,24 +979,24 @@ def game_loop(selected_skin):
                     continue
 
 
-            # Check bullet collisions with enemies
+            # colision à l'ennemi
             for enemy in enemies[:]:
                 if enemy not in bullet.hit_enemies:
                     distance = math.hypot(bullet.x - enemy.x, bullet.y - enemy.y)
                     if distance < bullet.radius + enemy.radius:
-                        # Deal damage to enemy
+                        # Degats à l'ennemi
                         enemy.health -= bullet.damage
                         bullet.hit_enemies.add(enemy)
 
-                        # If enemy dies, trigger explosion
+                        # explosion s'il meur
                         if enemy.health <= 0:
                             enemies.remove(enemy)
                             score += 1
-                            if score % 4 == 0:  # Gagner 1 crédit tous les 4 points
+                            if score % 2 == 0:  # Gagner 1 crédit tous les 2 points
                                 credits_earned += 1
                             if bullet.explosion_radius > 0:
                                 bullet.explode(enemies)
-                        # Handle bullet effects
+                        # effets de balles
                         if bullet.piercing > 0:
 
                             bullet.piercing -= 1
@@ -958,7 +1012,7 @@ def game_loop(selected_skin):
                             player_ship.bullets.remove(bullet)
                             break
 
-        # Update and draw enemies
+        # Update ad'ennemis
         for enemy in enemies[:]:
             enemy.update(player_ship)  # Add player parameter for shooter enemies
             enemy.move_towards(player_ship)
@@ -970,7 +1024,7 @@ def game_loop(selected_skin):
                 show_game_over(score, credits_earned)
                 break
 
-        # Spawn new wave when all enemies are defeated
+        # nouvelle vague
         if len(enemies) == 0:
             wave_number += 1
             if not shop_upgrades(player_ship):
@@ -979,13 +1033,12 @@ def game_loop(selected_skin):
             enemies = spawn_wave(wave_number)
             wave_text_timer = 120
 
-        # Draw UI
         if wave_text_timer > 0:
             wave_text = font.render(f"Wave {wave_number}", True, WHITE)
             window.blit(wave_text, (WIDTH // 2 - wave_text.get_width() // 2, HEIGHT // 2))
             wave_text_timer -= 1
 
-        # Décaler les statistiques à gauche
+        # statistiques à gauche
         score_text = font.render(f"Score: {score}", True, WHITE)
         health_text = font.render(f"Health: {int(player_ship.health)}/{player_ship.max_health}", True, GREEN)
         credits_text = font.render(f"Crédits: {credits_earned}", True, YELLOW)
@@ -993,14 +1046,14 @@ def game_loop(selected_skin):
         window.blit(health_text, (10, 50))
         window.blit(credits_text, (10, 90))
 
-        # Display last 3 upgrades
+        # dernieres 3 upgrades
         upgrade_y = 130
         for upgrade in player_ship.upgrades[-3:]:
             upgrade_text = font.render(upgrade, True, YELLOW)
             window.blit(upgrade_text, (10, upgrade_y))
             upgrade_y += 30
 
-        # Display stats
+        # Stats  ( a modifier )
         stats = [
             f"Damage: {player_ship.damage}",
             f"Speed: {player_ship.speed}",
