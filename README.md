@@ -1,8 +1,8 @@
 # Stardust-Odyssey
 
-Magufy -- Martin
-Poufi -- François
-Aviation -- Zima
+(Magufy -- Martin)
+(Poufi -- François)
+(Aviation -- Zima)
 
 
 
