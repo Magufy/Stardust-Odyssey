@@ -114,6 +114,7 @@ class Shop:
             "shop": Button(WIDTH // 2 - 100, HEIGHT // 2 - 25, 200, 50, "BOUTIQUE", BLUE),
             "play": Button(WIDTH // 2 - 100, HEIGHT // 2 + 50, 200, 50, "JOUER", GREEN),
             "back": Button(self.margin, self.margin, 100, 40, "RETOUR", GRAY),
+            "quit": Button(WIDTH // 2 - 100, HEIGHT // 2 + 125, 200, 50,"QUITTER", RED ),
         }
 
     def draw_skin_preview(self, surface, skin, x, y):
@@ -188,6 +189,8 @@ class Shop:
                         self.current_screen = "shop"
                     elif self.buttons["play"].handle_event(event):
                         game_loop(self.selected_skin)
+                    elif self.buttons["quit"].handle_event(event):
+                        pygame.quit()
 
                 elif self.current_screen == "shop":
                     if self.buttons["back"].handle_event(event):
@@ -210,6 +213,7 @@ class Shop:
                 screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 100))
                 self.buttons["shop"].draw(screen)
                 self.buttons["play"].draw(screen)
+                self.buttons["quit"].draw(screen)
 
             elif self.current_screen == "shop":
                 self.draw_shop_screen(screen)
