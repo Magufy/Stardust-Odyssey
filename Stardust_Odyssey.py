@@ -697,6 +697,7 @@ class ShooterEnemy(Enemy):
                 self.pick_new_position()
             else:
                 # Only shoot when stationary
+                self.shoot_cooldown = max(0, self.shoot_cooldown - 1)
                 if self.shoot_cooldown == 0:
                     dx = player.rect.centerx - self.x
                     dy = player.rect.centery - self.y
@@ -799,27 +800,124 @@ class LinkEnemy(Enemy):
             if other.type == [LinkEnemy] :
                 pygame.draw.line(window, (230,200,200),(self.x ,self.y ),(other.x,other.y),width=20)
 
+class Tank_Boss(Enemy):
+    def __init__(self):
+        super().__init__()
+        self.radius = 100
+        self.speed = 2
+        self.health = 600
+        self.damage = 30
+        self.color = RED
+        self.type= [Tank_Boss]
+
+        self.shoot_cooldown = 18
+        self.projectiles = []
+    
+        self.target_x = WIDTH//2
+        self.target_y = HEIGHT//2
+       
+
+    def update(self, player):
+        dx = self.target_x - self.x
+        dy = self.target_y - self.y
+        distance = math.hypot(dx, dy)
+
+    # Déplacement vers le centre uniquement si nécessaire
+        if distance > 5:
+            self.x += (dx / distance) * self.speed
+            self.y += (dy / distance) * self.speed
+        else:
+            self.shoot_cooldown = max(0, self.shoot_cooldown - 1)  # Décrémentation correcte du cooldown
+
+            if self.shoot_cooldown == 0:  # Seulement si le cooldown est à 0
+                print("Tank_Boss tente de tirer...")  # DEBUG
+                if self.shoot(player):  # Si le tir est effectué
+                    self.shoot_cooldown = 80  # Réinitialisation du cooldown après un tir
+                    print(f"Projectile ajouté à la liste ! Total projectiles: {len(self.projectiles)}")
+                
+        for proj in self.projectiles[:]:  
+            proj['x'] += proj['speed'] * math.cos(proj['angle'])
+            proj['y'] -= proj['speed'] * math.sin(proj['angle'])
+
+    def shoot(self, player):
+        print("Tank_Boss tire !")  # DEBUG pour voir si on entre bien ici
+        shoot_type = random.randint(1, 10)
+        shot_fired = False  # Nouvelle variable pour vérifier si un tir est effectué
+
+        if shoot_type <= 8:  # Rapidfire
+            for i in range(10):
+                dx = player.rect.centerx - self.x
+                dy = player.rect.centery - self.y
+                angle = math.atan2(-dy, dx)
+                self.projectiles.append({
+                    'x': self.x,
+                    'y': self.y,
+                    'angle': angle,
+                    'speed': 10,
+                    'radius': 10
+                })
+            shot_fired = True  # Un tir a été effectué
+
+        else:  # Bombe en cercle
+            for angle in range (0, 360, 20):
+                self.projectiles.append({
+                    'x': self.x,
+                    'y': self.y,
+                    'angle': math.radians(angle),
+                    'speed': 10,
+                    'radius': 10}
+                    )
+                shot_fired = True  # Un tir a été effectué
+
+        print(f"Tir effectué ? {shot_fired}")  # DEBUG pour voir si ça tire
+        return shot_fired
+        
+
+    def draw(self, window):
+        # Draw enemy
+        super().draw(window)
+
+        # Draw projectiles
+        for proj in self.projectiles:
+            pygame.draw.circle(window, RED, (int(proj['x']), int(proj['y'])), proj['radius'])
+            print(f"Projectile dessiné à ({proj['x']}, {proj['y']})")  # DEBUG
+    
+
+class Laser_Boss(Enemy):
+    pass
+
+class Mothership_Boss(Enemy) :
+    pass
+
 
 def spawn_wave(wave_number):
     enemies = []
     num_enemies = 3 + wave_number
-
-    test=False
-    if test:
-        types=[BasicEnemy] * 10 + [TankEnemy] * 10 + [ShooterEnemy] * 10 + [LinkEnemy] * 70
     
-    elif wave_number < 5:
+    if wave_number < 5 :
         types = [BasicEnemy] * 70 + [TankEnemy] * 30
     elif wave_number < 10:
         types = [BasicEnemy] * 50 + [TankEnemy] * 25 + [ShooterEnemy] * 25
-    else :
-        types = [BasicEnemy] * 30 + [TankEnemy] * 25 + [ShooterEnemy] * 25 [LinkEnemy] * 20
+    elif wave_number < 15 :
+        types = [BasicEnemy] * 30 + [TankEnemy] * 25 + [ShooterEnemy] * 25 + [LinkEnemy] * 20
+
+    if wave_number == 5 :
+        enemies.append(Tank_Boss())
+        return enemies
+    elif wave_number == 10 :
+        enemies.append(Laser_Boss())
+        return enemies
+    elif wave_number == 15 :
+        enemies.append(Mothership_Boss())
+        return enemies
+    else:
+        for i in range(num_enemies):
+            enemy_class = random.choice(types)
+            enemies.append(enemy_class())
+        return enemies
 
 
-    for _ in range(num_enemies):
-        enemy_class = random.choice(types)
-        enemies.append(enemy_class())
-    return enemies
+
 
 def shop_upgrades(player):
     all_upgrades = [
@@ -858,32 +956,184 @@ def shop_upgrades(player):
 
         {"name": "Reload Speed", "effect": "Reload Speed +20%","niveau":1,
          "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
+        {"name": "Reload Speed", "effect": "Reload Speed +20%","niveau":2,
+         "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
+        {"name": "Reload Speed", "effect": "Reload Speed +20%","niveau":3,
+         "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
+        {"name": "Reload Speed", "effect": "Reload Speed +20%","niveau":4,
+         "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
+        {"name": "Reload Speed", "effect": "Reload Speed +20%","niveau":5,
+         "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
+
+
         {"name": "Regeneration", "effect": "Health Regen +0.5/s","niveau":1,
          "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
+        {"name": "Regeneration", "effect": "Health Regen +0.5/s","niveau":2,
+         "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
+        {"name": "Regeneration", "effect": "Health Regen +0.5/s","niveau":3,
+         "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
+        {"name": "Regeneration", "effect": "Health Regen +0.5/s","niveau":4,
+         "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
+        {"name": "Regeneration", "effect": "Health Regen +0.5/s","niveau":5,
+         "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
+
+
         {"name": "Enemy Bounce", "effect": "Enemy Bounces +1","niveau":1,
          "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
+        {"name": "Enemy Bounce", "effect": "Enemy Bounces +1","niveau":2,
+         "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
+        {"name": "Enemy Bounce", "effect": "Enemy Bounces +1","niveau":3,
+         "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
+        {"name": "Enemy Bounce", "effect": "Enemy Bounces +1","niveau":4,
+         "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
+        {"name": "Enemy Bounce", "effect": "Enemy Bounces +1","niveau":5,
+         "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
+
+
         {"name": "Wall Bounce", "effect": "Wall Bounces +1","niveau":1,
          "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
+        {"name": "Wall Bounce", "effect": "Wall Bounces +1","niveau":2,
+         "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
+        {"name": "Wall Bounce", "effect": "Wall Bounces +1","niveau":3,
+         "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
+        {"name": "Wall Bounce", "effect": "Wall Bounces +1","niveau":4,
+         "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
+        {"name": "Wall Bounce", "effect": "Wall Bounces +1","niveau":5,
+         "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
+
+
         {"name": "Piercing", "effect": "Bullet Piercing +1","niveau":1,
          "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
+        {"name": "Piercing", "effect": "Bullet Piercing +1","niveau":2,
+         "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
+        {"name": "Piercing", "effect": "Bullet Piercing +1","niveau":3,
+         "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
+        {"name": "Piercing", "effect": "Bullet Piercing +1","niveau":4,
+         "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
+        {"name": "Piercing", "effect": "Bullet Piercing +1","niveau":5,
+         "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
+
+
         {"name": "Multi Shot", "effect": "Parallel Shots +1","niveau":1,
          "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
+        {"name": "Multi Shot", "effect": "Parallel Shots +1","niveau":2,
+         "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
+        {"name": "Multi Shot", "effect": "Parallel Shots +1","niveau":3,
+         "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
+        {"name": "Multi Shot", "effect": "Parallel Shots +1","niveau":4,
+         "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
+        {"name": "Multi Shot", "effect": "Parallel Shots +1","niveau":5,
+         "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
+
+
         {"name": "Shield", "effect": "Damage Reduction +5%","niveau":1,
          "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
+        {"name": "Shield", "effect": "Damage Reduction +5%","niveau":2,
+         "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
+        {"name": "Shield", "effect": "Damage Reduction +5%","niveau":3,
+         "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
+        {"name": "Shield", "effect": "Damage Reduction +5%","niveau":4,
+         "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
+        {"name": "Shield", "effect": "Damage Reduction +5%","niveau":5,
+         "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
+
+
         {"name": "Bullet Size", "effect": "Bullet Size +2","niveau":1,
          "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
+        {"name": "Bullet Size", "effect": "Bullet Size +2","niveau":2,
+         "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
+        {"name": "Bullet Size", "effect": "Bullet Size +2","niveau":3,
+         "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
+        {"name": "Bullet Size", "effect": "Bullet Size +2","niveau":4,
+         "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
+        {"name": "Bullet Size", "effect": "Bullet Size +2","niveau":5,
+         "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
+
+
         {"name": "Explosion", "effect": "Explosion Radius +10","niveau":1,
-         "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 10) },
+         "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 20) },
+        {"name": "Explosion", "effect": "Explosion Radius +10","niveau":2,
+         "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 20) },
+        {"name": "Explosion", "effect": "Explosion Radius +10","niveau":3,
+         "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 20) },
+        {"name": "Explosion", "effect": "Explosion Radius +10","niveau":4,
+         "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 20) },
+        {"name": "Explosion", "effect": "Explosion Radius +10","niveau":5,
+         "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 20) },
+
+
         {"name": "Range Up", "effect": "Bullet Range +100","niveau":1,
          "apply": lambda p: setattr(p, "range", p.range + 100)},
+        {"name": "Range Up", "effect": "Bullet Range +100","niveau":2,
+         "apply": lambda p: setattr(p, "range", p.range + 100)},
+        {"name": "Range Up", "effect": "Bullet Range +100","niveau":3,
+         "apply": lambda p: setattr(p, "range", p.range + 100)},
+        {"name": "Range Up", "effect": "Bullet Range +100","niveau":4,
+         "apply": lambda p: setattr(p, "range", p.range + 100)},
+        {"name": "Range Up", "effect": "Bullet Range +100","niveau":5,
+         "apply": lambda p: setattr(p, "range", p.range + 100)},
+
+
         {"name": "Body Damage", "effect": "Body Damage +5","niveau":1,
+         "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},         
+        {"name": "Body Damage", "effect": "Body Damage +5","niveau":2,
+         "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},         
+        {"name": "Body Damage", "effect": "Body Damage +5","niveau":3,
          "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},
+        {"name": "Body Damage", "effect": "Body Damage +5","niveau":4,
+         "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},
+        {"name": "Body Damage", "effect": "Body Damage +5","niveau":5,
+         "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},
+
+
         {"name": "Forcefield", "effect": "Forcefield Damage +2/s","niveau":1,
          "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
+        {"name": "Forcefield", "effect": "Forcefield Damage +2/s","niveau":2,
+         "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
+        {"name": "Forcefield", "effect": "Forcefield Damage +2/s","niveau":3,
+         "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
+        {"name": "Forcefield", "effect": "Forcefield Damage +2/s","niveau":4,
+         "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
+        {"name": "Forcefield", "effect": "Forcefield Damage +2/s","niveau":5,
+         "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
+
+
         {"name": "Decoy", "effect": "Double Attack Speed, Half Damage","niveau":1,
          "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", p.damage / 2)]},
+        {"name": "Decoy", "effect": "Double Attack Speed, Half Damage","niveau":2,
+         "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", p.damage / 2)]},
+        {"name": "Decoy", "effect": "Double Attack Speed, Half Damage","niveau":3,
+         "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", p.damage / 2)]},
+        {"name": "Decoy", "effect": "Double Attack Speed, Half Damage","niveau":4,
+         "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", p.damage / 2)]},
+        {"name": "Decoy", "effect": "Double Attack Speed, Half Damage","niveau":5,
+         "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", p.damage / 2)]},
+
+
         {"name": "Berserker", "effect": "Damage scales with missing health","niveau":1,
-         "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)}
+         "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)},         
+        {"name": "Berserker", "effect": "Damage scales with missing health","niveau":2,
+         "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)},         
+        {"name": "Berserker", "effect": "Damage scales with missing health","niveau":3,
+         "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)},
+        {"name": "Berserker", "effect": "Damage scales with missing health","niveau":4,
+         "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)},
+        {"name": "Berserker", "effect": "Damage scales with missing health","niveau":5,
+         "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)},
+         
+
+        {"name": "Speed", "effect": "FASTER","niveau":1,
+         "apply": lambda p: setattr(p, "speed", p.speed + p.speed*0.1)},         
+        {"name": "Speed", "effect": "FASTER","niveau":2,
+         "apply": lambda p: setattr(p, "speed", p.speed + p.speed*0.1)},     
+        {"name": "Speed", "effect": "FASTER","niveau":3,
+         "apply": lambda p: setattr(p, "speed", p.speed + p.speed*0.1)},
+        {"name": "Speed", "effect": "FASTER","niveau":4,
+         "apply": lambda p: setattr(p, "speed", p.speed + p.speed*0.1)},
+        {"name": "Speed", "effect": "FASTER","niveau":5,
+         "apply": lambda p: setattr(p, "speed", p.speed + p.speed*0.1)}
+
+
     ]
 
     shop_upgrades = random.sample(all_upgrades, 3)
