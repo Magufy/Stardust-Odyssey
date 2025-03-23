@@ -443,7 +443,7 @@ class VaisseauDiamant(Ship):
         self.health += 50
         self.max_health += 50
         self.speed += 1.2
-        self.damage += 10
+        self.damage += 80
         self.explosion_radius += 300
         pygame.draw.polygon(self.image, (0, 255, 255), [(20, 0), (0, 40), (40, 40)])
 
@@ -804,14 +804,17 @@ def spawn_wave(wave_number):
     enemies = []
     num_enemies = 3 + wave_number
 
-    test=True
+    test=False
     if test:
         types=[BasicEnemy] * 10 + [TankEnemy] * 10 + [ShooterEnemy] * 10 + [LinkEnemy] * 70
     
     elif wave_number < 5:
         types = [BasicEnemy] * 70 + [TankEnemy] * 30
-    else:
-        types = [BasicEnemy] * 60 + [TankEnemy] * 25 + [ShooterEnemy] * 15
+    elif wave_number < 10:
+        types = [BasicEnemy] * 50 + [TankEnemy] * 25 + [ShooterEnemy] * 25
+    else :
+        types = [BasicEnemy] * 30 + [TankEnemy] * 25 + [ShooterEnemy] * 25 [LinkEnemy] * 20
+
 
     for _ in range(num_enemies):
         enemy_class = random.choice(types)
@@ -820,39 +823,66 @@ def spawn_wave(wave_number):
 
 def shop_upgrades(player):
     all_upgrades = [
-        {"name": "Health Up", "effect": "Max Health +20",
+        {"name": "Health Up", "effect": "Max Health +20","niveau":1,
          "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
-        {"name": "Damage Up", "effect": "Bullet Damage +5",
+        {"name": "Health Up", "effect": "Max Health +20","niveau":2,
+         "apply": lambda p: setattr(p, "max_health", p.max_health + 20)}, 
+        {"name": "Health Up", "effect": "Max Health +20","niveau":3,
+         "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
+        {"name": "Health Up", "effect": "Max Health +20","niveau":4,
+         "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
+        {"name": "Health Up", "effect": "Max Health +20","niveau":5,
+         "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
+
+        {"name": "Damage Up", "effect": "Bullet Damage +5","niveau":1,
          "apply": lambda p: setattr(p, "damage", p.damage + 5)},
-        {"name": "Bullet Speed", "effect": "Bullet Speed +2",
+        {"name": "Damage Up", "effect": "Bullet Damage +5","niveau":2,
+         "apply": lambda p: setattr(p, "damage", p.damage + 5)},
+        {"name": "Damage Up", "effect": "Bullet Damage +5","niveau":3,
+         "apply": lambda p: setattr(p, "damage", p.damage + 5)},
+        {"name": "Damage Up", "effect": "Bullet Damage +5","niveau":4,
+         "apply": lambda p: setattr(p, "damage", p.damage + 5)},
+        {"name": "Damage Up", "effect": "Bullet Damage +5","niveau":5,
+         "apply": lambda p: setattr(p, "damage", p.damage + 5)},
+
+        {"name": "Bullet Speed", "effect": "Bullet Speed +2","niveau":1,
+         "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},         
+        {"name": "Bullet Speed", "effect": "Bullet Speed +2","niveau":2,
          "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},
-        {"name": "Reload Speed", "effect": "Reload Speed +20%",
+        {"name": "Bullet Speed", "effect": "Bullet Speed +2","niveau":3,
+         "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},
+        {"name": "Bullet Speed", "effect": "Bullet Speed +2","niveau":4,
+         "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},
+        {"name": "Bullet Speed", "effect": "Bullet Speed +2","niveau":5,
+         "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},
+
+        {"name": "Reload Speed", "effect": "Reload Speed +20%","niveau":1,
          "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
-        {"name": "Regeneration", "effect": "Health Regen +0.5/s",
+        {"name": "Regeneration", "effect": "Health Regen +0.5/s","niveau":1,
          "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
-        {"name": "Enemy Bounce", "effect": "Enemy Bounces +1",
+        {"name": "Enemy Bounce", "effect": "Enemy Bounces +1","niveau":1,
          "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
-        {"name": "Wall Bounce", "effect": "Wall Bounces +1",
+        {"name": "Wall Bounce", "effect": "Wall Bounces +1","niveau":1,
          "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
-        {"name": "Piercing", "effect": "Bullet Piercing +1",
+        {"name": "Piercing", "effect": "Bullet Piercing +1","niveau":1,
          "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
-        {"name": "Multi Shot", "effect": "Parallel Shots +1",
+        {"name": "Multi Shot", "effect": "Parallel Shots +1","niveau":1,
          "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
-        {"name": "Shield", "effect": "Damage Reduction +5%",
+        {"name": "Shield", "effect": "Damage Reduction +5%","niveau":1,
          "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
-        {"name": "Bullet Size", "effect": "Bullet Size +2",
+        {"name": "Bullet Size", "effect": "Bullet Size +2","niveau":1,
          "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
-        {"name": "Explosion", "effect": "Explosion Radius +10",
+        {"name": "Explosion", "effect": "Explosion Radius +10","niveau":1,
          "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 10) },
-        {"name": "Range Up", "effect": "Bullet Range +100",
+        {"name": "Range Up", "effect": "Bullet Range +100","niveau":1,
          "apply": lambda p: setattr(p, "range", p.range + 100)},
-        {"name": "Body Damage", "effect": "Body Damage +5",
+        {"name": "Body Damage", "effect": "Body Damage +5","niveau":1,
          "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},
-        {"name": "Forcefield", "effect": "Forcefield Damage +2/s",
+        {"name": "Forcefield", "effect": "Forcefield Damage +2/s","niveau":1,
          "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
-        {"name": "Decoy", "effect": "Double Attack Speed, Half Damage",
+        {"name": "Decoy", "effect": "Double Attack Speed, Half Damage","niveau":1,
          "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", p.damage / 2)]},
-        {"name": "Berserker", "effect": "Damage scales with missing health",
+        {"name": "Berserker", "effect": "Damage scales with missing health","niveau":1,
          "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)}
     ]
 
@@ -869,8 +899,8 @@ def shop_upgrades(player):
         window.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 4))
 
         for i, upgrade in enumerate(shop_upgrades):
-            y_pos = HEIGHT // 2 + i * 60
-            rect = pygame.Rect(WIDTH // 4, y_pos, WIDTH // 2, 50)
+
+            rect = pygame.Rect(i * 500 + WIDTH//19, HEIGHT//5,WIDTH//4, HEIGHT//1.5)
             color = YELLOW if selected == i else WHITE
             pygame.draw.rect(window, color, rect, 2)
 
