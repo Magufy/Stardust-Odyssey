@@ -717,13 +717,13 @@ class ShooterEnemy(Enemy):
             proj['x'] += proj['speed'] * math.cos(proj['angle'])
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
 
-            # Remove if off screen
+            # hors de l'ecran
             if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
                 proj['y'] < -50 or proj['y'] > HEIGHT + 50):
                 self.projectiles.remove(proj)
                 continue
 
-            # Check collision with player
+            # collision au joueur
             if not player.invincible_time > 0:
                 dist = math.hypot(player.rect.centerx - proj['x'],
                                 player.rect.centery - proj['y'])
@@ -830,49 +830,54 @@ class Tank_Boss(Enemy):
             self.shoot_cooldown = max(0, self.shoot_cooldown - 1)  # Décrémentation correcte du cooldown
 
             if self.shoot_cooldown == 0:  # Seulement si le cooldown est à 0
-                print("Tank_Boss tente de tirer...")  # DEBUG
-                if self.shoot(player):  # Si le tir est effectué
-                    self.shoot_cooldown = 80  # Réinitialisation du cooldown après un tir
-                    print(f"Projectile ajouté à la liste ! Total projectiles: {len(self.projectiles)}")
+        
+                shoot_type = random.randint(1, 100)
+                if shoot_type <= 95:  # Rapidfire
+                    dx = player.rect.centerx - self.x
+                    dy = player.rect.centery - self.y
+                    angle = math.atan2(-dy, dx)
+                    self.projectiles.append({
+                            'x': self.x,
+                            'y': self.y,
+                            'angle': angle,
+                            'speed': 10,
+                            'radius': 10})
+                    self.shoot_cooldown = 20
+
+                else:  # Bombe en cercle
+                    for angle in range (0, 360, 20):
+                        self.projectiles.append({
+                            'x': self.x,
+                            'y': self.y,
+                            'angle': math.radians(angle),
+                            'speed': 10,
+                            'radius': 10}
+                            )
+                    self.shoot_cooldown = 180  #3sec
                 
-        for proj in self.projectiles[:]:  
+        # Update projectiles
+        for proj in self.projectiles[:]:
             proj['x'] += proj['speed'] * math.cos(proj['angle'])
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
 
-    def shoot(self, player):
-        print("Tank_Boss tire !")  # DEBUG pour voir si on entre bien ici
-        shoot_type = random.randint(1, 10)
-        shot_fired = False  # Nouvelle variable pour vérifier si un tir est effectué
+            # Hors de l'ecran
+            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
+                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
+                self.projectiles.remove(proj)
+                continue
 
-        if shoot_type <= 8:  # Rapidfire
-            for i in range(10):
-                dx = player.rect.centerx - self.x
-                dy = player.rect.centery - self.y
-                angle = math.atan2(-dy, dx)
-                self.projectiles.append({
-                    'x': self.x,
-                    'y': self.y,
-                    'angle': angle,
-                    'speed': 10,
-                    'radius': 10
-                })
-            shot_fired = True  # Un tir a été effectué
-
-        else:  # Bombe en cercle
-            for angle in range (0, 360, 20):
-                self.projectiles.append({
-                    'x': self.x,
-                    'y': self.y,
-                    'angle': math.radians(angle),
-                    'speed': 10,
-                    'radius': 10}
-                    )
-                shot_fired = True  # Un tir a été effectué
-
-        print(f"Tir effectué ? {shot_fired}")  # DEBUG pour voir si ça tire
-        return shot_fired
+            # collision au joueur
+            if not player.invincible_time > 0:
+                dist = math.hypot(player.rect.centerx - proj['x'],
+                                player.rect.centery - proj['y'])
+                if dist < proj['radius'] + 20:
+                    damage = self.damage * (1 - player.shield / 100)
+                    player.health -= damage
+                    player.invincible_time = 60
+                    self.projectiles.remove(proj)
         
 
+    
     def draw(self, window):
         # Draw enemy
         super().draw(window)
@@ -892,29 +897,35 @@ class Mothership_Boss(Enemy) :
 
 def spawn_wave(wave_number):
     enemies = []
-    num_enemies = 3 + wave_number
-    
-    if wave_number < 5 :
+    cycle=1 + wave_number//20
+    cycle_wave=wave_number%20
+    num_enemies = cycle_wave + 3*cycle
+
+
+
+    if cycle_wave < 5 :
         types = [BasicEnemy] * 70 + [TankEnemy] * 30
-    elif wave_number < 10:
+    elif cycle_wave < 10:
         types = [BasicEnemy] * 50 + [TankEnemy] * 25 + [ShooterEnemy] * 25
-    elif wave_number < 15 :
+    elif cycle_wave < 15 :
         types = [BasicEnemy] * 30 + [TankEnemy] * 25 + [ShooterEnemy] * 25 + [LinkEnemy] * 20
 
-    if wave_number == 5 :
+    if cycle_wave == 5 :
         enemies.append(Tank_Boss())
-        return enemies
-    elif wave_number == 10 :
+        return enemies,cycle
+    elif cycle_wave == 10 :
         enemies.append(Laser_Boss())
-        return enemies
-    elif wave_number == 15 :
+        return enemies,cycle
+    elif cycle_wave == 15 :
         enemies.append(Mothership_Boss())
-        return enemies
+        return enemies,cycle
+        #else wave 20 donc boss final
     else:
         for i in range(num_enemies):
             enemy_class = random.choice(types)
             enemies.append(enemy_class())
-        return enemies
+        return enemies,cycle
+
 
 
 
@@ -1177,13 +1188,16 @@ def shop_upgrades(player):
 def game_loop(selected_skin):
     global enemies
     player_ship = Ship(selected_skin)
-    enemies = spawn_wave(1)  # lance la vague 1
+    enemies,cycle = spawn_wave(1)  # lance la vague 1
     wave_number = 1
     score = 0
     credits_earned = 0  # Crédits gagnés pendant cette partie
     running = True
     font = pygame.font.Font(None, 36)
     wave_text_timer = 0
+
+    for enemy in enemies :
+        enemy.health = enemy.health * cycle ** 2
 
     if selected_skin["name"] == "Vaisseau Doré":
         player_ship = VaisseauDore()
@@ -1310,11 +1324,11 @@ def game_loop(selected_skin):
             if not shop_upgrades(player_ship):
                 running = False
                 break
-            enemies = spawn_wave(wave_number)
+            enemies,cycle = spawn_wave(wave_number)
             wave_text_timer = 120
 
         if wave_text_timer > 0:
-            wave_text = font.render(f"Wave {wave_number}", True, WHITE)
+            wave_text = font.render(f"Cycle {cycle}      Wave {wave_number}", True, WHITE)
             window.blit(wave_text, (WIDTH // 2 - wave_text.get_width() // 2, HEIGHT // 2))
             wave_text_timer -= 1
 
