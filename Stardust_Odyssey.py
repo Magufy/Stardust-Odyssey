@@ -608,6 +608,8 @@ class BasicEnemy(Enemy):
         self.color = RED
         self.type= [BasicEnemy]
 
+        self.healthbar=False
+
     def move_towards(self, player):
         dx = player.rect.centerx - self.x
         dy = player.rect.centery - self.y
@@ -632,6 +634,8 @@ class TankEnemy(Enemy):
         self.damage = 20
         self.color = YELLOW
         self.type= [TankEnemy]
+
+        self.healthbar=False
 
     def move_towards(self, player):
         dx = player.rect.centerx - self.x
@@ -668,6 +672,8 @@ class ShooterEnemy(Enemy):
         self.stationary_timer = 0
         self.is_moving = True
         self.pick_new_position()
+
+        self.healthbar=False
 
     def pick_new_position(self):
         margin = 100
@@ -763,6 +769,8 @@ class LinkEnemy(Enemy):
         self.is_moving = True
         self.pick_new_position()
 
+        self.healthbar=False
+
     def pick_new_position(self):
         margin = 100
         self.target_x = random.randint(margin, WIDTH - margin)
@@ -804,18 +812,21 @@ class Tank_Boss(Enemy):
     def __init__(self):
         super().__init__()
         self.radius = 100
-        self.speed = 2
+        self.speed = 3
         self.health = 600
-        self.damage = 30
+        self.maxhealth=600
+        self.damage = 5
         self.color = RED
         self.type= [Tank_Boss]
+        self.bossname= "BEHEMOTH"
 
         self.shoot_cooldown = 18
         self.projectiles = []
     
         self.target_x = WIDTH//2
         self.target_y = HEIGHT//2
-       
+        
+        self.healthbar=True
 
     def update(self, player):
         dx = self.target_x - self.x
@@ -889,7 +900,94 @@ class Tank_Boss(Enemy):
     
 
 class Laser_Boss(Enemy):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.radius = 140
+        self.speed = 3
+        self.health = 1000
+        self.maxhealth=1000
+        self.damage = 30
+        self.color = BLUE
+        self.type= [Laser_Boss]
+        self.bossname= "TAZZZER"
+
+        self.shoot_cooldown = 6
+        self.projectiles = []
+    
+        self.target_x = random.randint(200,WIDTH-200)
+        self.target_y = random.randint(200,HEIGHT-200)
+        
+        self.healthbar=True
+
+    def update(self, player):
+        dx = self.target_x - self.x
+        dy = self.target_y - self.y
+        distance = math.hypot(dx, dy)
+
+    # Déplacement vers le centre uniquement si nécessaire
+        if distance > 5:
+            self.x += (dx / distance) * self.speed
+            self.y += (dy / distance) * self.speed
+        else:
+            self.shoot_cooldown = max(0, self.shoot_cooldown - 1)  # Décrémentation correcte du cooldown
+
+            if self.shoot_cooldown == 0:  # Seulement si le cooldown est à 0
+        
+                shoot_type = random.randint(1, 100)
+                if shoot_type <= 99:  # Rapidfire
+                    dx = player.rect.centerx - self.x
+                    dy = player.rect.centery - self.y
+                    angle = math.atan2(-dy, dx)
+                    self.projectiles.append({
+                            'x': self.x,
+                            'y': self.y,
+                            'angle': angle,
+                            'speed': 5,
+                            'radius': 20})
+                    self.shoot_cooldown = 3
+
+                else:  # Bombe en cercle
+                    for i in range (10):
+                        angle=random.randint(0,360)
+
+                        self.projectiles.append({
+                            'x': self.x,
+                            'y': self.y,
+                            'angle': math.radians(angle),
+                            'speed': 4,
+                            'radius': 30}
+                            )
+                    self.shoot_cooldown = 240  #4sec
+                
+        # Update projectiles
+        for proj in self.projectiles[:]:
+            proj['x'] += proj['speed'] * math.cos(proj['angle'])
+            proj['y'] -= proj['speed'] * math.sin(proj['angle'])
+
+            # Hors de l'ecran
+            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
+                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
+                self.projectiles.remove(proj)
+                continue
+
+            # collision au joueur en ignorant sa periode d'invincibilité
+            dist = math.hypot(player.rect.centerx - proj['x'],
+                            player.rect.centery - proj['y'])
+            if dist < proj['radius'] + 20:
+                damage = self.damage * (1 - player.shield / 100)
+                player.health -= damage
+                self.projectiles.remove(proj)
+        
+
+    
+    def draw(self, window):
+        # Draw enemy
+        super().draw(window)
+
+        # Draw projectiles
+        for proj in self.projectiles:
+            pygame.draw.circle(window, RED, (int(proj['x']), int(proj['y'])), proj['radius'])
+            print(f"Projectile dessiné à ({proj['x']}, {proj['y']})")  # DEBUGpass
 
 class Mothership_Boss(Enemy) :
     pass
@@ -925,7 +1023,6 @@ def spawn_wave(wave_number):
             enemy_class = random.choice(types)
             enemies.append(enemy_class())
         return enemies,cycle
-
 
 
 
@@ -1331,6 +1428,16 @@ def game_loop(selected_skin):
             wave_text = font.render(f"Cycle {cycle}      Wave {wave_number}", True, WHITE)
             window.blit(wave_text, (WIDTH // 2 - wave_text.get_width() // 2, HEIGHT // 2))
             wave_text_timer -= 1
+
+        if enemies[0].healthbar==True :
+            pygame.draw.line(window,RED,(int(WIDTH//2 - (enemies[0].health/enemies[0].maxhealth)*300),20),(int(WIDTH//2 + (enemies[0].health/enemies[0].maxhealth)*300),20),width=20)
+
+            rect= WIDTH//2-300 , 10 , 600 , 20
+            pygame.draw.rect(window,WHITE,rect,2)
+
+            bosstag = font.render(enemies[0].bossname,True,WHITE)
+            window.blit(bosstag, (WIDTH//2-50, 15))
+
 
         # statistiques à gauche
         score_text = font.render(f"Score: {score}", True, WHITE)
