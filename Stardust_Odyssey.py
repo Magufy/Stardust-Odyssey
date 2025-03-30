@@ -255,6 +255,7 @@ class Ship:
         self.body_damage = 5
         self.last_shot_time = 0
         self.invincible_time = 0
+        self.stun_timer=0
 
         self.forcefield_damage = 0
         self.forcefield_radius = 0
@@ -265,13 +266,13 @@ class Ship:
     def move(self):
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_z] and self.volicite_haut < 1:  # Avancer
+        if keys[pygame.K_z] and self.volicite_haut < 1 and self.stun_timer==0:  # Avancer
             self.volicite_haut += 0.02
-        if keys[pygame.K_s] and self.volicite_bas < 1:  # Reculer
+        if keys[pygame.K_s] and self.volicite_bas < 1 and self.stun_timer==0:  # Reculer
             self.volicite_bas += 0.02     
-        if keys[pygame.K_q] and self.volicite_gauche < 1:  # Gauche
+        if keys[pygame.K_q] and self.volicite_gauche < 1 and self.stun_timer==0:  # Gauche
             self.volicite_gauche += 0.02           
-        if keys[pygame.K_d] and self.volicite_droite < 1:  # Droite
+        if keys[pygame.K_d] and self.volicite_droite < 1 and self.stun_timer==0:  # Droite
             self.volicite_droite += 0.02
 
         if self.volicite_haut > 0 :
@@ -292,7 +293,7 @@ class Ship:
         if self.volicite_droite > 0 and not keys[pygame.K_d]:
             self.volicite_droite -= 0.01
 
-        #TD de bord à bord de l'écran
+        #TP de bord à bord de l'écran
         if self.rect.x <= 0 :
             self.rect.x = WIDTH-5
             self.health-=5
@@ -354,7 +355,8 @@ class Ship:
                         enemy.health -= self.forcefield_damage
                         if enemy.health <= 0:
                             enemies.remove(enemy)
-
+        if self.stun_timer>0:
+            self.stun_timer-=1
     def draw(self, window):
         # Draw forcefield if active
         if self.forcefield_damage > 0:
@@ -897,6 +899,108 @@ class Tank_Boss(Enemy):
         for proj in self.projectiles:
             pygame.draw.circle(window, RED, (int(proj['x']), int(proj['y'])), proj['radius'])
             print(f"Projectile dessiné à ({proj['x']}, {proj['y']})")  # DEBUG
+
+
+class Dash_Boss(Enemy):
+    def __init__(self):
+        super().__init__()
+        self.radius = 110
+        self.speed = 4
+        self.health = 800
+        self.maxhealth=800
+        self.damage = 50
+        self.color = YELLOW
+        self.type= [Dash_Boss]
+        self.bossname= "BERSERKER"
+
+        self.healthbar=True
+        self.projectiles = []
+
+        self.is_moving = False
+        self.shooting = False
+        self.action_timer = 0  # Timer pour l'action en cours
+
+         # événements
+        self.MOVE_EVENT = pygame.USEREVENT + 1
+        self.STOP_EVENT = pygame.USEREVENT + 2
+        self.SHOOT_EVENT = pygame.USEREVENT + 3
+
+    def move_towards_action(self, player):
+        dx = player.rect.centerx - self.x
+        dy = player.rect.centery - self.y
+        distance = math.hypot(dx, dy)
+
+        if distance <= player.range or self.is_on_screen():
+            if distance != 0:
+                dx = dx / distance * self.speed
+                dy = dy / distance * self.speed
+                self.x += dx
+                self.y += dy
+
+    def shoot_at_player(self, player):
+        dx = player.rect.centerx - self.x
+        dy = player.rect.centery - self.y
+        angle = math.atan2(-dy, dx)
+        self.projectiles.append({
+                'x': self.x,
+                'y': self.y,
+                'angle': angle,
+                'speed': 10,
+                'radius': 50})
+
+    def update(self, player):
+    # Si il doit bouger
+        if self.is_moving:
+            self.move_towards_action(player)
+        if self.shooting:
+            self.shoot_at_player(player)
+            self.shooting=False
+    
+    # Vérifier si le timer de l'action est 0
+        if self.action_timer > 0:
+            self.action_timer -= 1
+        else:
+        # Réinitialise l'action
+            self.is_moving = False
+
+        action = random.randint(0, 100)
+
+        if action == 1:  # 1% de chances de suivre le joueur
+            self.is_moving = True
+            self.action_timer = 90  # 1.5 seconde
+
+        elif action == 2:  # 1% de chances de tirer
+            self.shooting = True
+            self.action_timer = 120  # 2 secondes
+
+
+        for proj in self.projectiles[:]:
+            proj['x'] += proj['speed'] * math.cos(proj['angle'])
+            proj['y'] -= proj['speed'] * math.sin(proj['angle'])
+
+            # Hors de l'ecran
+            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
+                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
+                self.projectiles.remove(proj)
+                continue
+
+            # collision au joueur en ignorant sa periode d'invincibilité
+            dist = math.hypot(player.rect.centerx - proj['x'],
+                            player.rect.centery - proj['y'])
+            if dist < proj['radius'] + 20:
+                player.stun_timer=120
+                self.projectiles.remove(proj)
+
+
+    def draw(self, window):
+        # Draw enemy
+        super().draw(window)
+
+        # Draw projectiles
+        for proj in self.projectiles:
+            pygame.draw.circle(window, RED, (int(proj['x']), int(proj['y'])), proj['radius'])
+        
+
     
 
 class Laser_Boss(Enemy):
@@ -943,7 +1047,8 @@ class Laser_Boss(Enemy):
                             'y': self.y,
                             'angle': angle,
                             'speed': 5,
-                            'radius': 20})
+                            'radius': 20,
+                            'damage':5})
                     self.shoot_cooldown = 3
 
                 else:  # Bombe en cercle
@@ -955,7 +1060,8 @@ class Laser_Boss(Enemy):
                             'y': self.y,
                             'angle': math.radians(angle),
                             'speed': 4,
-                            'radius': 30}
+                            'radius': 30,
+                            'damage':50}
                             )
                     self.shoot_cooldown = 240  #4sec
                 
@@ -970,11 +1076,21 @@ class Laser_Boss(Enemy):
                 self.projectiles.remove(proj)
                 continue
 
+            if proj['x'] <= 0 :
+                proj['x'] = WIDTH-5
+            if proj['x'] >= WIDTH :
+                proj['x'] = 5            
+            if proj['y'] <= 0 :
+                proj['y'] = HEIGHT-5                
+            if proj['y'] >= HEIGHT :
+                proj['y']z = 5
+                
+
             # collision au joueur en ignorant sa periode d'invincibilité
             dist = math.hypot(player.rect.centerx - proj['x'],
                             player.rect.centery - proj['y'])
             if dist < proj['radius'] + 20:
-                damage = self.damage * (1 - player.shield / 100)
+                damage = proj['damage'] * (1 - player.shield / 100)
                 player.health -= damage
                 self.projectiles.remove(proj)
         
@@ -987,7 +1103,6 @@ class Laser_Boss(Enemy):
         # Draw projectiles
         for proj in self.projectiles:
             pygame.draw.circle(window, RED, (int(proj['x']), int(proj['y'])), proj['radius'])
-            print(f"Projectile dessiné à ({proj['x']}, {proj['y']})")  # DEBUGpass
 
 class Mothership_Boss(Enemy) :
     pass
@@ -1014,7 +1129,10 @@ def spawn_wave(wave_number):
     elif cycle_wave == 10 :
         enemies.append(Laser_Boss())
         return enemies,cycle
-    elif cycle_wave == 15 :
+    elif cycle_wave == 15:
+        enemies.append(Dash_Boss())
+        return enemies,cycle
+    elif cycle_wave == 20 :
         enemies.append(Mothership_Boss())
         return enemies,cycle
         #else wave 20 donc boss final
@@ -1294,7 +1412,8 @@ def game_loop(selected_skin):
     wave_text_timer = 0
 
     for enemy in enemies :
-        enemy.health = enemy.health * cycle ** 2
+        enemy.health = int(enemy.health * cycle ** 1.5)
+        enemy.damage = enemy.damage * cycle
 
     if selected_skin["name"] == "Vaisseau Doré":
         player_ship = VaisseauDore()
@@ -1318,6 +1437,7 @@ def game_loop(selected_skin):
         window.fill((0, 0, 0))
 
         for event in pygame.event.get():
+            
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -1403,7 +1523,7 @@ def game_loop(selected_skin):
                             player_ship.bullets.remove(bullet)
                             break
 
-        # Update ad'ennemis
+        # Update ennemis
         for enemy in enemies[:]:
             enemy.update(player_ship)  # Add player parameter for shooter enemies
             enemy.move_towards(player_ship)
