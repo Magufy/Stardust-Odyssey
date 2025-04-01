@@ -800,18 +800,27 @@ class LinkEnemy(Enemy):
                 self.is_moving = True
                 self.pick_new_position()
 
-        if player.invincible_time<0 :
+        if player.invincible_time<=0 :
             for other in enemies :
-                if other.type == [LinkEnemy] :
-                    for i in range (int(self.x),int(other.x)):
-                        if player.rect.centerx == i :
-                            for j in range (int(self.y),int(other.y)):
-                                if player.rect.centery == j :
-                                    player.health -= self.damage
-                                    player.invincible_time=60
-                        
+                if other is not self and other.type == [LinkEnemy]:
 
-                           
+                    px, py = player.rect.centerx, player.rect.centery  #co joueur
+
+                    x1, y1 = self.x, self.y         #co enemies (1 et 2)
+                    x2, y2 = other.x, other.y
+
+                    dot1 = (px - x1) * (x2 - x1) + (py - y1) * (y2 - y1) #entre les 2 enemies
+                    dot2 = (px - x2) * (x1 - x2) + (py - y2) * (y1 - y2)
+
+                    if dot1 >= 0 and dot2 >= 0: 
+
+                        distance = abs((y2 - y1) * px - (x2 - x1) * py + x2 * y1 - y2 * x1) / math.hypot(x2 - x1, y2 - y1)
+      
+                        if distance < 5:
+                            player.health -= self.damage
+                            player.invincible_time = 60
+
+
 
     def draw(self, window):
         super().draw(window)
@@ -899,6 +908,8 @@ class Tank_Boss(Enemy):
                     player.health -= damage
                     player.invincible_time = 60
                     self.projectiles.remove(proj)
+            
+            
         
 
     
@@ -1104,6 +1115,10 @@ class Laser_Boss(Enemy):
                 damage = proj['damage'] * (1 - player.shield / 100)
                 player.health -= damage
                 self.projectiles.remove(proj)
+            
+            proj['radius']-=0.02
+            if proj['radius']<3:
+                self.projectiles.remove(proj)
         
 
     
@@ -1138,10 +1153,10 @@ def spawn_wave(wave_number):
         enemies.append(Tank_Boss())
         return enemies,cycle
     elif cycle_wave == 10 :
-        enemies.append(Laser_Boss())
+        enemies.append(Dash_Boss())        
         return enemies,cycle
     elif cycle_wave == 15:
-        enemies.append(Dash_Boss())
+        enemies.append(Laser_Boss())
         return enemies,cycle
     elif cycle_wave == 20 :
         enemies.append(Mothership_Boss())
