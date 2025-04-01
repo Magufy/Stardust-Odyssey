@@ -1083,7 +1083,7 @@ class Laser_Boss(Enemy):
             if proj['y'] <= 0 :
                 proj['y'] = HEIGHT-5                
             if proj['y'] >= HEIGHT :
-                proj['y']z = 5
+                proj['y'] = 5
                 
 
             # collision au joueur en ignorant sa periode d'invincibilité
