@@ -800,6 +800,17 @@ class LinkEnemy(Enemy):
                 self.is_moving = True
                 self.pick_new_position()
 
+        if player.invincible_time<0 :
+            for other in enemies :
+                if other.type == [LinkEnemy] :
+                    for i in range (int(self.x),int(other.x)):
+                        if player.rect.centerx == i :
+                            for j in range (int(self.y),int(other.y)):
+                                if player.rect.centery == j :
+                                    player.health -= self.damage
+                                    player.invincible_time=60
+                        
+
                            
 
     def draw(self, window):
@@ -1117,7 +1128,7 @@ def spawn_wave(wave_number):
 
 
     if cycle_wave < 5 :
-        types = [BasicEnemy] * 70 + [TankEnemy] * 30
+        types = [LinkEnemy] * 70 + [TankEnemy] * 30
     elif cycle_wave < 10:
         types = [BasicEnemy] * 50 + [TankEnemy] * 25 + [ShooterEnemy] * 25
     elif cycle_wave < 15 :
