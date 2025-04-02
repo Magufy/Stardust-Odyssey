@@ -115,8 +115,8 @@ class Shop:
             "play": Button(WIDTH // 2 - 100, HEIGHT // 2 + 50, 200, 50, "JOUER", GREEN),
             "back": Button(self.margin, self.margin, 100, 40, "RETOUR", GRAY),
             "quit": Button(WIDTH // 2 - 100, HEIGHT // 2 + 125, 200, 50,"QUITTER", RED ),
-            "tab1": Button(self.margin + 100 , self.margin, 100, 40, "Shop skin", BLUE),
-            "tab2": Button(self.margin + 200, self.margin, 100, 40, "Upgrades", GREEN),
+            "tab1": Button(self.margin + 100 , self.margin, 150, 50, "Shop skin", BLUE),
+            "tab2": Button(self.margin + 260, self.margin, 150, 50, "Upgrades", GREEN),
         }
 
     def draw_skin_preview(self, surface, skin, x, y):
