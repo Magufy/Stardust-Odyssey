@@ -115,8 +115,8 @@ class Shop:
             "play": Button(WIDTH // 2 - 100, HEIGHT // 2 + 50, 200, 50, "JOUER", GREEN),
             "back": Button(self.margin, self.margin, 100, 40, "RETOUR", GRAY),
             "quit": Button(WIDTH // 2 - 100, HEIGHT // 2 + 125, 200, 50,"QUITTER", RED ),
-            "tab1": Button(self.margin, self.margin, 100, 40, "Shop skin", BLUE),
-            "tab2": Button(self.margin + 100, self.margin, 100, 40, "Upgrades", GREEN),
+            "tab1": Button(self.margin + 100 , self.margin, 100, 40, "Shop skin", BLUE),
+            "tab2": Button(self.margin + 200, self.margin, 100, 40, "Upgrades", GREEN),
         }
 
     def draw_skin_preview(self, surface, skin, x, y):
@@ -178,7 +178,13 @@ class Shop:
             x = self.margin + col * (self.card_width + self.padding)
             y = self.margin + 100 + row * (self.card_height + self.padding)
             self.draw_skin_preview(surface, skin, x, y)
-
+    
+    def draw_shopupgrade_screen(self, surface):
+        surface.fill(BLACK)
+        elf.buttons["back"].draw(surface)
+        self.buttons["tab1"].draw(surface)
+        self.buttons["tab2"].draw(surface)
+        
     def run(self, screen):
         running = True
         while running:
@@ -197,6 +203,10 @@ class Shop:
                 elif self.current_screen == "shop":
                     if self.buttons["back"].handle_event(event):
                         self.current_screen = "menu"
+                    if self.buttons["tab1"].handle_event(event):
+                        self.current_screen = "shop"
+                    if self.buttons["tab2"].handle_event(event):
+                        self.current_screen = "shop upgrades"
 
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         mouse_pos = event.pos
@@ -219,6 +229,9 @@ class Shop:
 
             elif self.current_screen == "shop":
                 self.draw_shop_screen(screen)
+                self.buttons["back"].draw(screen)
+                self.buttons["tab1"].draw(screen)
+                self.buttons["tab2"].draw(screen)
 
             pygame.display.flip()
 
