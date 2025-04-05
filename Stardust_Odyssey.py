@@ -168,6 +168,8 @@ class Shop:
     def draw_shop_screen(self, surface):
         surface.fill(BLACK)
         self.buttons["back"].draw(surface)
+        self.buttons["tab1"].draw(surface)
+        self.buttons["tab2"].draw(surface)
 
         credits_text = font.render(f"Crédits: {self.credits}", True, WHITE)
         surface.blit(credits_text, (WIDTH - 200, self.margin))
@@ -184,6 +186,19 @@ class Shop:
         elf.buttons["back"].draw(surface)
         self.buttons["tab1"].draw(surface)
         self.buttons["tab2"].draw(surface)
+
+        def draw_cases (surface):
+            CARD_WIDTH = 100
+            CARD_HEIGHT = 100
+            PADDING = 20
+            MARGIN = 40
+            total_cases = 8
+            cases_par_ligne = 4
+            for i in range (total_cases):
+                ligne = i // cases_par_ligne
+                colonne = i % cases_par_ligne
+                x = MARGIN + colonne * (CARD_WIDTH + PADDING)
+                y = 120 + ligne * (CARD_HEIGHT + PADDING)
         
     def run(self, screen):
         running = True
