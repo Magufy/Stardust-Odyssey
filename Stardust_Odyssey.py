@@ -316,7 +316,7 @@ class Ship:
 
     def shoot(self):
         current_time = pygame.time.get_ticks()
-        if current_time - self.last_shot_time < 500 / self.reload_speed:  # 500ms base cooldown
+        if current_time - self.last_shot_time < 1000 / self.reload_speed:  # 500ms base cooldown
             return
 
         angle_rad = math.radians(self.angle)
@@ -726,10 +726,14 @@ class ShooterEnemy(Enemy):
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
 
             # hors de l'ecran
-            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
-                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
-                self.projectiles.remove(proj)
-                continue
+            if proj['x'] <= 0 :
+                proj['x'] = WIDTH-5
+            if proj['x'] >= WIDTH :
+                proj['x'] = 5            
+            if proj['y'] <= 0 :
+                proj['y'] = HEIGHT-5                
+            if proj['y'] >= HEIGHT :
+                proj['y'] = 5
 
             # collision au joueur
             if not player.invincible_time > 0:
