@@ -4,8 +4,9 @@ import math
 import json
 import socket
 import threading
-import time 
+import time
 import os
+from queue import Queue
 
 pygame.init()
 
@@ -41,21 +42,84 @@ def save_data(credits, selected_skin, skins):
 # Fonction pour charger les données
 def load_data():
     try:
+        # Vérifier si le fichier existe
+        if not os.path.exists("save_data.json"):
+            # Créer le fichier avec les valeurs par défaut
+            default_data = {
+                "credits": 5000,
+                "selected_skin": {
+                    "name": "Vaisseau Basique",
+                    "price": "gratuit",
+                    "unlocked": True,
+                    "preview_color": BLUE
+                },
+                "skins": [{
+                    "name": "Vaisseau Basique",
+                    "price": "gratuit",
+                    "unlocked": True,
+                    "preview_color": BLUE
+                }]
+            }
+            with open("save_data.json", "w") as file:
+                json.dump(default_data, file)
+            return default_data["credits"], default_data["selected_skin"], default_data["skins"]
+
+        # Lire le fichier existant
         with open("save_data.json", "r") as file:
-            data = json.load(file)
+            try:
+                data = json.load(file)
+                
+                # Vérifier si selected_skin est un dictionnaire
+                selected_skin = data.get("selected_skin", None)
+                if isinstance(selected_skin, dict) and "preview_color" in selected_skin:
+                    selected_skin["preview_color"] = tuple(selected_skin["preview_color"])
 
-            # Vérifier si selected_skin est bien un dictionnaire
-            selected_skin = data.get("selected_skin", None)
-            if isinstance(selected_skin, dict) and "preview_color" in selected_skin:
-                selected_skin["preview_color"] = tuple(selected_skin["preview_color"])
+                # Convertir les preview_color en tuples pour tous les skins
+                skins = data.get("skins", [])
+                for skin in skins:
+                    if isinstance(skin, dict) and "preview_color" in skin:
+                        skin["preview_color"] = tuple(skin["preview_color"])
 
-            return (
-                data.get("credits", 5000),  # Crédits par défaut           
-                selected_skin,  # Skin sélectionné par défaut
-                data.get("skins", [])  # Skins débloqués par défaut
-            )
-    except FileNotFoundError:
-        return 5000, None, []  # Valeurs par défaut si le fichier n'existe pas           
+                return (
+                    data.get("credits", 5000),
+                    selected_skin,
+                    skins
+                )
+            except json.JSONDecodeError:
+                # Si le fichier est corrompu, créer un nouveau avec les valeurs par défaut
+                default_data = {
+                    "credits": 5000,
+                    "selected_skin": {
+                        "name": "Vaisseau Basique",
+                        "price": "gratuit",
+                        "unlocked": True,
+                        "preview_color": BLUE
+                    },
+                    "skins": [{
+                        "name": "Vaisseau Basique",
+                        "price": "gratuit",
+                        "unlocked": True,
+                        "preview_color": BLUE
+                    }]
+                }
+                with open("save_data.json", "w") as file:
+                    json.dump(default_data, file)
+                return default_data["credits"], default_data["selected_skin"], default_data["skins"]
+
+    except Exception as e:
+        print(f"Erreur lors du chargement des données: {e}")
+        # Retourner les valeurs par défaut en cas d'erreur
+        return 5000, {
+            "name": "Vaisseau Basique",
+            "price": "gratuit",
+            "unlocked": True,
+            "preview_color": BLUE
+        }, [{
+            "name": "Vaisseau Basique",
+            "price": "gratuit",
+            "unlocked": True,
+            "preview_color": BLUE
+        }]
 
 class Button:
     def __init__(self, x, y, width, height, text, color):
@@ -116,7 +180,7 @@ class InputBox:
         pygame.draw.rect(screen, self.color, self.rect, 2)
 
 class P2PCommunication:
-    def __init__(self, est_serveur=True, ip_hote=None, port=5555):
+    def __init__(self, est_serveur=True, ip_hote=None, port=5555, local_skin_info=None):
         self.est_serveur = est_serveur
         self.ip_hote = ip_hote
         self.port = port
@@ -124,155 +188,402 @@ class P2PCommunication:
         self.connexion = None
         self.running = True
         self.data_lock = threading.Lock()
-    
+        self.last_send_time = 0
+        self.buffer = b''
+        self.message_separator = b'\n'  # Use a reliable separator
+        self.local_skin_info = local_skin_info  # Store local skin
+        self.remote_skin_info = None  # To store received skin info
+        self.send_interval = 1/30  # Consistent with game_loop rate
+
     def obtenir_adresse_ip_locale(self):
-        """Détecte automatiquement l'adresse IP locale du système"""
+        """Obtient l'adresse IP locale de la machine"""
         try:
+            # Créer une connexion socket temporaire pour obtenir l'IP locale
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # Connexion à un serveur externe (n'envoie pas réellement de données)
             s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
+            ip_locale = s.getsockname()[0]
             s.close()
-            return ip
-        except Exception:
-            return "127.0.0.1"
-    
+            return ip_locale
+        except Exception as e:
+            print(f"Erreur lors de l'obtention de l'adresse IP locale: {e}")
+            return "127.0.0.1"  # Fallback to localhost
+
     def initialiser(self):
-        """Initialise soit le serveur soit le client"""
+        """Initialise soit le serveur soit le client et échange les skins"""
         try:
+            print(f"  Initialisation en tant que {'serveur' if self.est_serveur else 'client'}")
             if self.est_serveur:
                 if not self.ip_hote:
                     self.ip_hote = self.obtenir_adresse_ip_locale()
-                self.initialiser_serveur()
+                    print(f"  Adresse IP locale détectée: {self.ip_hote}")
+                
+                print("  Démarrage de l'initialisation du serveur")
+                if not self.initialiser_serveur():
+                    print("  Échec de l'initialisation du serveur")
+                    return False
+                print("  Serveur initialisé avec succès")
             else:
-                self.initialiser_client()
+                print("  Démarrage de l'initialisation du client")
+                if not self.initialiser_client():
+                    print("  Échec de l'initialisation du client")
+                    return False
+                print("  Client initialisé avec succès")
+
+            # Vérifier que la connexion est établie
+            if not self.connexion:
+                print("  Connexion non établie après initialisation")
+                return False
+                
+            print("  Démarrage de l'échange d'informations sur les skins")
+            # Exchange skin information after connection
+            if not self.exchange_skin_info():
+                print("  Échec de l'échange d'informations sur le skin.")
+                self.fermer()
+                return False
+            
+            print(f"  Rôle: {'Serveur' if self.est_serveur else 'Client'}, Skin local: {self.local_skin_info.get('name', 'Inconnu')}, Skin distant: {self.remote_skin_info.get('name', 'Inconnu')}")
+                
             return True
         except Exception as e:
-            print(f"Erreur lors de l'initialisation: {e}")
+            print(f"  Erreur lors de l'initialisation P2P: {e}")
+            self.fermer()
             return False
-    
+
     def initialiser_serveur(self):
         """Configure et démarre le serveur"""
-        print("Démarrage du serveur...")
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind(("0.0.0.0", self.port))
-        self.socket.listen(1)
-        
-        print(f"\n=== INFORMATION DE CONNEXION ===")
-        print(f"Serveur démarré sur l'adresse IP: {self.ip_hote}:{self.port}")
-        print(f"Partagez cette adresse avec l'autre personne qui exécutera le client")
-        print(f"============================\n")
-        print("En attente de connexion...")
-        
-        self.connexion, adresse = self.socket.accept()
-        print(f"Connexion établie avec {adresse[0]}:{adresse[1]}")
-    
+        try:
+            print("  Démarrage du serveur...")
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Set a timeout for accept to prevent indefinite blocking
+            self.socket.settimeout(30.0)  # Timeout after 30 seconds
+            
+            try:
+                print("  Tentative de bind sur 0.0.0.0:" + str(self.port))
+                self.socket.bind(("0.0.0.0", self.port))
+                print("  Bind réussi")
+            except Exception as e:
+                print(f"  Erreur lors du bind: {e}")
+                return False
+                
+            self.socket.listen(1)
+            
+            print(f"\n=== INFORMATION DE CONNEXION ===")
+            print(f"Serveur démarré sur l'adresse IP: {self.ip_hote}:{self.port}")
+            print(f"Partagez cette adresse avec l'autre personne")
+            print(f"============================\n")
+            print("  En attente de connexion...")
+            
+            try:
+                self.connexion, adresse = self.socket.accept()
+                print(f"  Connexion acceptée de {adresse[0]}:{adresse[1]}")
+            except socket.timeout as e:
+                print(f"  Timeout lors de l'attente de connexion: {e}")
+                return False
+            except Exception as e:
+                print(f"  Erreur lors de l'acceptation de la connexion: {e}")
+                return False
+            
+            # Set socket back to blocking or add non-blocking handling later
+            self.connexion.settimeout(None) 
+            print(f"Connexion établie avec {adresse[0]}:{adresse[1]}")
+            return True
+        except socket.timeout:
+            print("  Aucune connexion reçue dans le délai imparti.")
+            return False
+        except Exception as e:
+            print(f"  Erreur serveur générale: {e}")
+            return False
+
     def initialiser_client(self):
         """Configure et connecte le client"""
-        print(f"Tentative de connexion à {self.ip_hote}:{self.port}...")
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.ip_hote, self.port))
-        self.connexion = self.socket
-        print("Connexion établie!")
-    
-    def recevoir_messages(self):
-        """Thread pour recevoir des messages"""
+        try:
+            print(f"Tentative de connexion à {self.ip_hote}:{self.port}...")
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Set a timeout for connect
+            self.socket.settimeout(10.0)  # 10 seconds timeout
+            self.socket.connect((self.ip_hote, self.port))
+            self.connexion = self.socket
+            # Set socket back to blocking or handle non-blocking later
+            self.connexion.settimeout(None) 
+            print("Connexion établie!")
+            return True
+        except socket.timeout:
+            print("Échec de la connexion : délai dépassé.")
+            return False
+        except Exception as e:
+            print(f"Erreur client: {e}")
+            return False
+             
+    def exchange_skin_info(self):
+        """Exchanges skin info between server and client"""
+        try:
+            # First, check if local_skin_info is valid
+            if not self.local_skin_info:
+                print("  Aucune information de skin local à échanger.")
+                return False
+                
+            # Ensure connexion is valid
+            if not self.connexion:
+                print("  Pas de connexion établie pour échanger les skins.")
+                return False
+                
+            print(f"  Envoi du skin local: {self.local_skin_info.get('name', 'Inconnu')}")
+            
+            # Make sure the skin info is serializable
+            local_skin_info_copy = {}
+            if isinstance(self.local_skin_info, dict):
+                # Only copy serializable fields
+                for key, value in self.local_skin_info.items():
+                    if isinstance(value, (str, int, float, bool, list, dict)) or value is None:
+                        local_skin_info_copy[key] = value
+            else:
+                print(f"  Format de skin local invalide: {type(self.local_skin_info)}")
+                local_skin_info_copy = {"name": "Vaisseau Basique"}
+            
+            # Send local skin info
+            try:
+                local_skin_payload = json.dumps({
+                    'type': 'skin_info', 
+                    'skin': local_skin_info_copy
+                }).encode('utf-8') + self.message_separator
+                
+                print(f"  Envoi payload: {local_skin_payload[:100]}...")
+                self.connexion.sendall(local_skin_payload)
+                print("  Skin local envoyé avec succès")
+            except Exception as e:
+                print(f"  Erreur lors de l'envoi du skin: {e}")
+                return False
+
+            # Receive remote skin info (with timeout)
+            print("  Attente du skin distant...")
+            self.connexion.settimeout(5.0)  # Short timeout for this exchange
+            received_data = b''
+            start_time = time.time()
+            
+            # Loop until we get the complete message or time out
+            while self.message_separator not in received_data and time.time() - start_time < 5.0:
+                try:
+                    chunk = self.connexion.recv(1024)
+                    if not chunk:
+                        print("  Connexion fermée pendant l'échange de skins")
+                        raise ConnectionAbortedError("La connexion a été fermée pendant l'échange de skins.")
+                    received_data += chunk
+                    print(f"  Reçu {len(chunk)} octets")
+                except socket.timeout:
+                    print("  Timeout lors de la réception, nouvelle tentative...")
+                    continue
+                except Exception as e:
+                    print(f"  Erreur lors de la réception: {e}")
+                    return False
+            
+            self.connexion.settimeout(None)  # Reset timeout
+            
+            if self.message_separator not in received_data:
+                print("  Délai d'attente dépassé en attendant les infos du skin distant.")
+                return False
+                
+            message = received_data[:received_data.find(self.message_separator)]
+            print(f"  Message reçu: {message[:100]}...")
+            
+            try:
+                data = json.loads(message.decode('utf-8'))
+                print(f"  Message décodé: {data}")
+                
+                if data.get('type') == 'skin_info':
+                    self.remote_skin_info = data.get('skin')
+                    print(f"  Skin distant reçu avec succès: {self.remote_skin_info.get('name', 'Inconnu')}")
+                    return True
+                else:
+                    print(f"  Type de message inattendu: {data.get('type')}")
+                    return False
+            except json.JSONDecodeError as e:
+                print(f"  Erreur lors du décodage JSON: {e}")
+                print(f"  Données reçues: {message.decode('utf-8', errors='replace')}")
+                return False
+            except Exception as e:
+                print(f"  Erreur lors du traitement du skin distant: {e}")
+                return False
+
+        except (socket.timeout, json.JSONDecodeError, ConnectionAbortedError) as e:
+            print(f"  Erreur lors de l'échange d'informations sur le skin: {e}")
+            return False
+        except Exception as e:
+            print(f"  Erreur inattendue lors de l'échange skin: {e}")
+            return False
+
+    def envoyer_donnees(self, data):
+        """Envoie des données JSON à l'autre pair, gère les différents types de messages."""
+        try:
+            current_time = time.time()
+            # Rate limiting for 'state' type messages only
+            if data.get('type') == 'state':
+                if current_time - self.last_send_time < self.send_interval:
+                    return  # Skip sending if too soon
+                self.last_send_time = current_time
+
+            with self.data_lock:
+                # Ensure data is a dictionary
+                if not isinstance(data, dict):
+                    print("Erreur: Les données à envoyer doivent être un dictionnaire.")
+                    return False  # Or handle appropriately
+
+                # Prepare message: Add type if missing (shouldn't happen with new structure)
+                if 'type' not in data:
+                    data['type'] = 'unknown'  # Fallback, but indicates an issue
+
+                # Serialize and send
+                message = json.dumps(data).encode('utf-8') + self.message_separator
+                self.connexion.sendall(message)
+                return True  # Indicate successful send attempt
+                
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            print("Erreur de connexion lors de l'envoi (pair déconnecté?).")
+            self.running = False  # Stop communication threads/loops
+            return False
+        except Exception as e:
+            print(f"Erreur lors de l'envoi des données ({data.get('type', '?')}): {e}")
+            return False  # Indicate failure
+
+    def recevoir_donnees(self):
+        """Reçoit et décode les messages JSON entrants."""
+        try:
+            # Use non-blocking recv with select or add timeout?
+            # For now, stick to blocking recv within the thread, but handle potential hangs
+            data = self.connexion.recv(4096) 
+            if not data:
+                # Connection closed by peer
+                print("Connexion fermée par le pair.")
+                self.running = False
+                return None 
+
+            self.buffer += data
+            messages = []
+            
+            # Process all complete messages in the buffer
+            while self.message_separator in self.buffer:
+                message_end = self.buffer.find(self.message_separator)
+                message = self.buffer[:message_end]
+                self.buffer = self.buffer[message_end + len(self.message_separator):]
+                
+                try:
+                    # Decode and parse JSON
+                    data_dict = json.loads(message.decode('utf-8'))
+                    messages.append(data_dict)  # Collect all received messages
+                except json.JSONDecodeError:
+                    print(f"Erreur de décodage JSON pour le message: {message[:100]}")  # Log corrupted message snippet
+                    continue  # Skip corrupted message
+                except UnicodeDecodeError:
+                    print(f"Erreur de décodage Unicode pour le message.")
+                    continue
+
+            # Return list of received messages (can be empty if no complete message arrived)
+            return messages if messages else None
+
+        except (BlockingIOError, socket.timeout):
+            # Expected if using non-blocking sockets or timeouts, simply means no data yet
+            return None 
+        except (ConnectionResetError, ConnectionAbortedError):
+            print("Erreur de connexion lors de la réception (pair déconnecté?).")
+            self.running = False
+            return None
+        except Exception as e:
+            # Catch other potential errors during receive
+            print(f"Erreur générique lors de la réception: {e}")
+            self.running = False  # Assume fatal error if unknown exception occurs
+            return None
+
+    def démarrer_communication(self):
+        """Démarre un thread pour recevoir les données en continu"""
+        self.running = True
+        threading.Thread(target=self._recevoir_boucle, daemon=True).start()
+        
+    def _recevoir_boucle(self):
+        """Boucle de réception des données (exécutée dans un thread)"""
         while self.running:
             try:
-                data = self.connexion.recv(1024)
+                data = self.recevoir_donnees()
                 if data:
-                    message = data.decode('utf-8')
-                    print(f"\nMessage reçu: {message}")
-                    print("Votre message: ", end="", flush=True)
-                else:
-                    print("\nConnexion perdue")
-                    self.running = False
-                    break
+                    # Process data - implementation depends on game architecture
+                    pass
+                time.sleep(0.01)  # Small sleep to prevent 100% CPU usage
             except Exception as e:
-                if self.running:  # Évite les messages d'erreur lors de la fermeture normale
-                    print(f"\nErreur lors de la réception: {e}")
+                print(f"Erreur dans la boucle de réception: {e}")
                 self.running = False
                 break
-    
-    def envoyer_message(self, message):
-        """Envoie un message à l'autre pair"""
-        try:
-            self.connexion.send(message.encode('utf-8'))
-            return True
-        except Exception as e:
-            print(f"Erreur lors de l'envoi: {e}")
-            return False
-    
-    def démarrer_communication(self):
-        """Démarre la communication bidirectionnelle"""
-        thread_reception = threading.Thread(target=self.recevoir_messages)
-        thread_reception.daemon = True
-        thread_reception.start()
-        
-        try:
-            while self.running:
-                message = input("Votre message: ")
-                if message.lower() == 'exit':
-                    self.running = False
-                    break
-                self.envoyer_message(message)
-        except KeyboardInterrupt:
-            print("\nFermeture de la connexion...")
-        finally:
-            self.fermer()
-    
+
     def fermer(self):
         """Ferme proprement les connexions"""
+        if not self.running:  # Prevent multiple closes
+            return
         self.running = False
-        time.sleep(0.5)  # Attente pour s'assurer que les threads sont terminés
+        print("Fermeture de la connexion P2P...")
+        # Close connection first
         if self.connexion:
             try:
-                self.connexion.close()
-            except:
+                # Shutdown may help ensure data is sent before closing
+                self.connexion.shutdown(socket.SHUT_RDWR) 
+            except OSError:  # Socket might already be closed
                 pass
+            except Exception as e:
+                print(f"Erreur lors de l'arrêt de la connexion: {e}")
+            finally:
+                try:
+                    self.connexion.close()
+                except Exception as e:
+                    print(f"Erreur lors de la fermeture de la connexion: {e}")
+                self.connexion = None
+
+        # Close server socket if it exists
         if self.socket and self.est_serveur:
             try:
                 self.socket.close()
-            except:
-                pass
-        print("Connexion fermée")
-    
-        def envoyer_donnees(self, donnees):
-            try:
-                self.connexion.send(json.dumps(donnees).encode('utf-8'))
-                return True
             except Exception as e:
-                print(f"Erreur lors de l'envoi des données: {e}")
-                return False
-
-        def recevoir_donnees(self):
-            try:
-                data = self.connexion.recv(1024)
-                if data:
-                    return json.loads(data.decode('utf-8'))
-            except Exception as e:
-                print(f"Erreur lors de la réception des données: {e}")
-        return None
+                print(f"Erreur lors de la fermeture du socket serveur: {e}")
+            self.socket = None
+        
+        # Client socket is usually the same as connection, already handled
+        
+        print("Connexion P2P fermée.")
     
-    def envoyer_donnees(self, donnees):
-        """Envoie des données à l'autre pair"""
-        try:
-            self.connexion.send(json.dumps(donnees).encode('utf-8'))
-            return True
-        except Exception as e:
-            print(f"Erreur lors de l'envoi des données: {e}")
-            return False
-
-    def recevoir_donnees(self):
-        """Reçoit des données de l'autre pair"""
-        try:
-            data = self.connexion.recv(1024)
-            if data:
-                return json.loads(data.decode('utf-8'))
-        except Exception as e:
-            print(f"Erreur lors de la réception des données: {e}")
-        return None
-
+    
+    
+class GameState:
+    """Classe pour synchroniser l'état du jeu entre les joueurs"""
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.player1 = None
+        self.player2 = None
+        self.bullets_p1 = []
+        self.bullets_p2 = []
+        self.enemies = []
+        self.wave_number = 1
+        self.last_update_time = time.time()
+        self.last_sync_time = time.time()
+        self.sync_interval = 0.05  # Synchronisation toutes les 50ms
+        
+    def update_from_network(self, data, is_player1):
+        current_time = time.time()
+        if current_time - self.last_sync_time < self.sync_interval:
+            return
+            
+        with self.lock:
+            if is_player1:
+                self.player1 = data.get('player', None)
+                self.bullets_p1 = data.get('bullets', [])
+            else:
+                self.player2 = data.get('player', None)
+                self.bullets_p2 = data.get('bullets', [])
+            
+            # Seul le serveur gère les ennemis
+            if 'enemies' in data and len(data['enemies']) > 0:
+                self.enemies = data['enemies']
+            if 'wave' in data:
+                self.wave_number = data['wave']
+            
+            self.last_sync_time = current_time
+            self.last_update_time = current_time
     
 
 class Shop:
@@ -284,6 +595,7 @@ class Shop:
         self.entering_ip = False
         self.connexion_reussie = False
         self.p2p = None
+        self.remote_skin_info = None # Store the received skin info
 
         self.grid_size = (4, 2)
         self.margin = 50
@@ -414,7 +726,32 @@ class Shop:
     
     def run(self, screen):
         running = True
+        # Initialize network status variables
+        network_status = ""
+        network_color = WHITE
+        
         while running:
+            # Reset network status for this frame
+            network_status = ""
+            network_color = WHITE
+            
+            if self.p2p:
+                if self.p2p.running and self.p2p.connexion:
+                    network_status = "Connecté"
+                    network_color = GREEN
+                    if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
+                        network_status += f" (Joueur 2: {self.p2p.remote_skin_info.get('name', 'Inconnu')})"
+                else:
+                    # Supprimer le message d'erreur
+                    network_status = ""
+                    network_color = WHITE
+            elif self.current_screen == "multiplayer_menu" and hasattr(self, 'entering_ip') and self.entering_ip:
+                network_status = "Saisie de l'IP..."
+            elif self.current_screen == "multiplayer_menu":
+                # Supprimer le message d'attente
+                network_status = ""
+            
+            # Event handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -427,6 +764,7 @@ class Shop:
                         self.current_screen = "play_menu"
                     elif self.buttons["quit"].handle_event(event):
                         pygame.quit()
+                        return  # Exit the function
 
                 # Gestion du menu de choix de mode
                 elif self.current_screen == "play_menu":
@@ -434,43 +772,93 @@ class Shop:
                         game_loop(self.selected_skin)  # Mode solo
                     elif self.buttons["multiplayer"].handle_event(event):
                         self.current_screen = "multiplayer_menu"
+                        # Initialize multiplayer attributes if they don't exist
+                        if not hasattr(self, 'entering_ip'):
+                            self.entering_ip = False
+                        if not hasattr(self, 'connexion_reussie'):
+                            self.connexion_reussie = False
+                        if not hasattr(self, 'remote_skin_info'):
+                            self.remote_skin_info = None
                     elif self.buttons["back"].handle_event(event):
                         self.current_screen = "menu"
 
                 # Gestion du menu multijoueur
                 elif self.current_screen == "multiplayer_menu":
-                    if self.buttons["create_room"].handle_event(event):
-                        # Lancer le serveur dans un thread séparé
-                        def start_server():
-                            self.p2p = P2PCommunication(est_serveur=True)
-                            if self.p2p.initialiser():
-                                print("Serveur créé avec succès !")
-                                self.connexion_reussie = True
+                    if "create_room" in self.buttons and self.buttons["create_room"].handle_event(event):
+                        if not self.p2p:  # Prevent creating multiple instances
+                            # Start server in a thread to avoid blocking UI
+                            def start_server():
+                                print("  Démarrage de la fonction start_server")
+                                try:
+                                    print(f"  Création du P2PCommunication avec skin: {self.selected_skin}")
+                                    self.p2p = P2PCommunication(est_serveur=True, local_skin_info=self.selected_skin)
+                                    print("  Appel de initialiser()")
+                                    if self.p2p.initialiser():
+                                        print("  Initialisation serveur réussie")
+                                        self.connexion_reussie = True  # Flag connection success
+                                        if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
+                                            print(f"  Skin distant reçu: {self.p2p.remote_skin_info}")
+                                            self.remote_skin_info = self.p2p.remote_skin_info  # Store remote skin
+                                        else:
+                                            print("  Aucun skin distant reçu")
+                                    else:
+                                        print("  Échec de l'initialisation du serveur")
+                                        self.p2p = None  # Clear p2p instance on failure
+                                        self.connexion_reussie = False
+                                except Exception as e:
+                                    print(f"  Exception dans start_server: {e}")
+                                    if hasattr(self, 'p2p') and self.p2p:
+                                        self.p2p = None
+                                    self.connexion_reussie = False
 
-                        threading.Thread(target=start_server).start()
+                            threading.Thread(target=start_server, daemon=True).start()
 
-                    elif self.buttons["join_room"].handle_event(event):
-                        # Activer le champ de saisie pour l'adresse IP
-                        self.entering_ip = True
+                    elif "join_room" in self.buttons and self.buttons["join_room"].handle_event(event):
+                        if not self.p2p:  # Only allow joining if not already connected/hosting
+                            self.entering_ip = True
+                            # Make sure input_box exists
+                            if not hasattr(self, 'input_box'):
+                                self.input_box = InputBox(WIDTH // 2 - 100, HEIGHT // 2, 200, 32)
 
-                    elif self.buttons["enter"].handle_event(event) and self.entering_ip:
-                        # Lancer le client avec l'adresse IP saisie
-                        def start_client():
-                            self.p2p = P2PCommunication(est_serveur=False, ip_hote=self.input_box.text)
-                            if self.p2p.initialiser():
-                                print("Connexion réussie !")
-                                self.connexion_reussie = True
+                    elif "enter" in self.buttons and self.buttons["enter"].handle_event(event) and self.entering_ip:
+                        if not self.p2p and hasattr(self, 'input_box'):  # Prevent multiple instances
+                            # Start client in a thread
+                            def start_client():
+                                self.p2p = P2PCommunication(est_serveur=False, ip_hote=self.input_box.text.strip(), local_skin_info=self.selected_skin)
+                                if self.p2p.initialiser():
+                                    print("Client connecté et skin échangé.")
+                                    self.connexion_reussie = True
+                                    if hasattr(self.p2p, 'remote_skin_info'):
+                                        self.remote_skin_info = self.p2p.remote_skin_info  # Store remote skin
+                                else:
+                                    print("Échec de la connexion client ou de l'échange de skin.")
+                                    self.p2p = None
+                                    self.connexion_reussie = False
+                                # Reset entering_ip regardless of success/failure after attempt
+                                self.entering_ip = False
 
-                        threading.Thread(target=start_client).start()
-                        self.entering_ip = False
+                            threading.Thread(target=start_client, daemon=True).start()
 
-                    elif self.buttons["jouer"].handle_event(event) and self.connexion_reussie:
-                        # Lancer la partie en multijoueur
-                        game_loop(self.selected_skin, self.p2p)
-                        self.connexion_reussie = False  # Réinitialiser l'indicateur
+                    elif "jouer" in self.buttons and self.buttons["jouer"].handle_event(event) and hasattr(self, 'connexion_reussie') and self.connexion_reussie and self.p2p:
+                        # Launch game, passing both local and remote skin info
+                        current_p2p = self.p2p  # Store current p2p instance
+                        self.p2p = None  # Reset shop's p2p reference
+                        self.connexion_reussie = False  # Reset flag
+                        game_loop(self.selected_skin, current_p2p, self.remote_skin_info)
+                        # After game_loop returns, we are back in the shop menu
+                        # Ensure p2p is closed if game_loop exits unexpectedly
+                        if current_p2p and current_p2p.running:
+                            current_p2p.fermer()
+                        self.remote_skin_info = None  # Clear remote skin info
 
-                    elif self.buttons["back"].handle_event(event):
+                    elif "back" in self.buttons and self.buttons["back"].handle_event(event):
+                        if self.p2p:  # If backing out, close connection
+                            self.p2p.fermer()
+                            self.p2p = None
                         self.current_screen = "play_menu"
+                        self.entering_ip = False
+                        self.connexion_reussie = False
+                        self.remote_skin_info = None
 
                 # Gestion du shop
                 elif self.current_screen == "shop":
@@ -489,47 +877,58 @@ class Shop:
                                 self.handle_skin_selection(skin)
 
                 # Gestion du champ de saisie pour l'adresse IP
-                if self.entering_ip:
+                if hasattr(self, 'entering_ip') and self.entering_ip and hasattr(self, 'input_box'):
                     self.input_box.handle_event(event)
+            
+            # Drawing Logic
+            screen.fill(BLACK) 
 
-            # Affichage des écrans
             if self.current_screen == "menu":
-                screen.fill(BLACK)
                 title = font.render("MENU PRINCIPAL", True, WHITE)
                 screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 100))
                 self.buttons["shop"].draw(screen)
                 self.buttons["play"].draw(screen)
                 self.buttons["quit"].draw(screen)
-
+                
             elif self.current_screen == "play_menu":
-                screen.fill(BLACK)
                 title = font.render("CHOISIR UN MODE", True, WHITE)
                 screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 100))
                 self.buttons["single_player"].draw(screen)
                 self.buttons["multiplayer"].draw(screen)
                 self.buttons["back"].draw(screen)
-
+                
             elif self.current_screen == "multiplayer_menu":
-                screen.fill(BLACK)
+                # Draw multiplayer menu titles, buttons
                 title = font.render("MULTIPLAYER", True, WHITE)
-                screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 100))
-                self.buttons["create_room"].draw(screen)
-                self.buttons["join_room"].draw(screen)
-                self.buttons["back"].draw(screen)
+                screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 4))
 
-                # Afficher le champ de saisie pour l'adresse IP
-                if self.entering_ip:
+                # Draw buttons
+                if "create_room" in self.buttons: self.buttons["create_room"].draw(screen)
+                if "join_room" in self.buttons: self.buttons["join_room"].draw(screen)
+                if "back" in self.buttons: self.buttons["back"].draw(screen)
+
+                # Show IP input box if joining
+                if hasattr(self, 'entering_ip') and self.entering_ip and hasattr(self, 'input_box'):
+                    ip_prompt = font.render("Entrez l'IP du serveur:", True, WHITE)
+                    screen.blit(ip_prompt, (self.input_box.rect.x, self.input_box.rect.y - 30))
                     self.input_box.draw(screen)
-                    self.buttons["enter"].draw(screen)
+                    if "enter" in self.buttons: self.buttons["enter"].draw(screen)
+                
+                # Show status and Jouer button if connected
+                status_text_surf = font.render(network_status, True, network_color)
+                screen.blit(status_text_surf, (WIDTH // 2 - status_text_surf.get_width() // 2, HEIGHT // 2 + 150))
 
-                # Afficher le bouton "Jouer" si la connexion est réussie
-                if self.connexion_reussie:
+                if hasattr(self, 'connexion_reussie') and self.connexion_reussie and "jouer" in self.buttons:
                     self.buttons["jouer"].draw(screen)
 
             elif self.current_screen == "shop":
                 self.draw_shop_screen(screen)
 
             pygame.display.flip()
+        
+        # Ensure P2P connection is closed if the main loop exits
+        if hasattr(self, 'p2p') and self.p2p:
+            self.p2p.fermer()
 
 class Ship:
     def __init__(self, selected_skin="Vaisseau Basique"):
@@ -649,7 +1048,7 @@ class Ship:
             self.health = min(self.max_health, self.health + self.regen_rate / 60)
         if self.invincible_time > 0:
             self.invincible_time -= 1
-
+        
         # Update forcefield radius based on range
         self.forcefield_radius = 500-(400-self.range*0.2)
 
@@ -874,30 +1273,44 @@ class Enemy:
             return False
 
         distance = math.hypot(player.rect.centerx - self.x, player.rect.centery - self.y)
-        if distance < self.radius + 20:
+        if distance < self.radius + 20: # Use player radius (assuming 20)
             # degats - shield
             damage_to_player = self.damage * (1 - player.shield / 100)
             player.health -= damage_to_player
+            player.health = max(0, player.health) # Clamp health to minimum 0
             player.invincible_time = 60
-        
-             # degats autour de lui
-            for enemy in enemies[:]:
-                distance = math.hypot(self.x - enemy.x, self.y - enemy.y)
-                if distance <= 100:
-                    enemy.health -= player.body_damage  # Half damage for explosion
-                    if enemy.health <= 0:
-                        enemies.remove(enemy)
 
-            explosion_surface = pygame.Surface((200,200), pygame.SRCALPHA)
-
-            pygame.draw.circle(explosion_surface, (100, 200, 255,30),
-                            (player.explosion_radius, player.explosion_radius),
-                                    player.explosion_radius, 2)
-            window.blit(explosion_surface,
-                       (int(self.x - player.explosion_radius),
-                        int(self.y - player.explosion_radius)))
-
-
+            # Body damage logic if player has it
+            if hasattr(player, 'body_damage') and player.body_damage > 0:
+                # Apply body damage to the enemy
+                self.health -= player.body_damage
+                
+            # Envoyer une mise à jour de santé si on est en multijoueur et que ce n'est pas le joueur principal
+            # qui est touché (principal au sens du point de vue de cette instance de jeu)
+            if hasattr(self, 'p2p_comm') and self.p2p_comm:
+                # Si ce joueur est le joueur distant (donc joueur 2 depuis le serveur, ou joueur 1 depuis le client)
+                is_server = getattr(self.p2p_comm, 'est_serveur', True)
+                is_local_player = hasattr(player, 'is_local') and player.is_local
+                
+                if not is_local_player:
+                    if is_server:
+                        # Si c'est le serveur qui détecte collision avec joueur 2
+                        self.p2p_comm.envoyer_donnees({
+                            'type': 'damage_update',
+                            'player2_health': player.health,
+                            'player2_invincible_time': player.invincible_time,
+                            'player2_regen_rate': player.regen_rate,
+                            'player2_max_health': player.max_health
+                        })
+                    else:
+                        # Si c'est le client qui détecte collision avec joueur 1 (cas rare)
+                        self.p2p_comm.envoyer_donnees({
+                            'type': 'damage_update',
+                            'player1_health': player.health,
+                            'player1_invincible_time': player.invincible_time,
+                            'player1_regen_rate': player.regen_rate,
+                            'player1_max_health': player.max_health
+                        })
 
             return True
         return False
@@ -999,8 +1412,8 @@ class ShooterEnemy(Enemy):
 
                 self.x += (dx / distance) * self.speed
                 self.y += (dy / distance) * self.speed
+                
         else:
-
             self.stationary_timer -= 1
             if self.stationary_timer <= 0:
                 self.is_moving = True
@@ -1036,11 +1449,46 @@ class ShooterEnemy(Enemy):
             if not player.invincible_time > 0:
                 dist = math.hypot(player.rect.centerx - proj['x'],
                                 player.rect.centery - proj['y'])
-                if dist < proj['radius'] + 20:
+                if dist < proj['radius'] + 20: # Use player radius (assuming 20)
                     damage = self.damage * (1 - player.shield / 100)
                     player.health -= damage
+                    player.health = max(0, player.health) # Clamp health to minimum 0
                     player.invincible_time = 60
                     self.projectiles.remove(proj)
+            
+            # Si nous sommes dans le jeu en multijoueur, on vérifie aussi une collision avec l'autre joueur
+            # Note: Cette vérification est effectuée séparément de l'update global des ennemis
+            # pour assurer que les deux joueurs détectent correctement les collisions des projectiles
+            if hasattr(self, 'second_player') and self.second_player and not self.second_player.invincible_time > 0:
+                dist = math.hypot(self.second_player.rect.centerx - proj['x'],
+                               self.second_player.rect.centery - proj['y'])
+                if dist < proj['radius'] + 20:
+                    damage = self.damage * (1 - self.second_player.shield / 100)
+                    self.second_player.health -= damage
+                    self.second_player.health = max(0, self.second_player.health)
+                    self.second_player.invincible_time = 60
+                    self.projectiles.remove(proj)
+                    
+                    # Si on est dans une partie multijoueur et qu'il existe une fonction pour envoyer des données
+                    if hasattr(self, 'p2p_comm') and self.p2p_comm and hasattr(self.p2p_comm, 'envoyer_donnees'):
+                        is_server = getattr(self.p2p_comm, 'est_serveur', True)
+                        # Le serveur envoie les mises à jour du joueur 2, le client envoie les mises à jour du joueur 1
+                        if is_server:
+                            self.p2p_comm.envoyer_donnees({
+                                'type': 'damage_update',
+                                'player2_health': self.second_player.health,
+                                'player2_invincible_time': self.second_player.invincible_time,
+                                'player2_regen_rate': self.second_player.regen_rate,
+                                'player2_max_health': self.second_player.max_health
+                            })
+                        else:
+                            self.p2p_comm.envoyer_donnees({
+                                'type': 'damage_update',
+                                'player1_health': self.second_player.health,
+                                'player1_invincible_time': self.second_player.invincible_time,
+                                'player1_regen_rate': self.second_player.regen_rate,
+                                'player1_max_health': self.second_player.max_health
+                            })
 
     def draw(self, window):
         # Draw enemy
@@ -1056,18 +1504,21 @@ class LinkEnemy(Enemy):
     def __init__(self):
         super().__init__()
         self.radius = 50
-        self.speed=1
-        self.health=100
-        self.damage=20
+        self.speed = 1
+        self.health = 100
+        self.damage = 20
         self.color = WHITE
-        self.type= [LinkEnemy]
-
+        self.type = [LinkEnemy]
+        
+        # Ajout des attributs manquants
+        self.shoot_cooldown = 0
+        self.shoot_delay = random.randint(60, 120)
         self.projectiles = []
-
-        # Movement attributes
+        
+        # Attributs de mouvement
         self.target_x = 0
         self.target_y = 0
-        self.stationary_time = 150 
+        self.stationary_time = 150
         self.stationary_timer = 0
         self.is_moving = True
         self.pick_new_position()
@@ -1078,386 +1529,1051 @@ class LinkEnemy(Enemy):
         self.target_y = random.randint(margin, HEIGHT - margin)
 
     def update(self, player):
+        # Mise à jour du cooldown
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
+
+        # Gestion du mouvement
         if self.is_moving:
             dx = self.target_x - self.x
             dy = self.target_y - self.y
             distance = math.hypot(dx, dy)
 
-            if distance < self.speed:  # est au point aleatoire
+            if distance < self.speed:
                 self.x = self.target_x
                 self.y = self.target_y
                 self.is_moving = False
                 self.stationary_timer = self.stationary_time
             else:
-                # Va au point aleatoire
                 self.x += (dx / distance) * self.speed
                 self.y += (dy / distance) * self.speed
-                
         else:
             self.stationary_timer -= 1
             if self.stationary_timer <= 0:
                 self.is_moving = True
                 self.pick_new_position()
 
-                           
+        # Mise à jour des projectiles
+        for proj in self.projectiles[:]:
+            proj['x'] += proj['speed'] * math.cos(proj['angle'])
+            proj['y'] -= proj['speed'] * math.sin(proj['angle'])
+
+            # Supprimer les projectiles hors écran
+            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
+                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
+                self.projectiles.remove(proj)
+                continue
+
+            # Vérifier les collisions avec le joueur
+            if not player.invincible_time > 0:
+                dist = math.hypot(player.rect.centerx - proj['x'],
+                                player.rect.centery - proj['y'])
+                if dist < proj['radius'] + 20: # Use player radius (assuming 20)
+                    damage = self.damage * (1 - player.shield / 100)
+                    player.health -= damage
+                    player.health = max(0, player.health) # Clamp health to minimum 0
+                    player.invincible_time = 60
+                    self.projectiles.remove(proj)
+            
+            # Si nous sommes dans le jeu en multijoueur, on vérifie aussi une collision avec l'autre joueur
+            # Note: Cette vérification est effectuée séparément de l'update global des ennemis
+            # pour assurer que les deux joueurs détectent correctement les collisions des projectiles
+            if hasattr(self, 'second_player') and self.second_player and not self.second_player.invincible_time > 0:
+                dist = math.hypot(self.second_player.rect.centerx - proj['x'],
+                               self.second_player.rect.centery - proj['y'])
+                if dist < proj['radius'] + 20:
+                    damage = self.damage * (1 - self.second_player.shield / 100)
+                    self.second_player.health -= damage
+                    self.second_player.health = max(0, self.second_player.health)
+                    self.second_player.invincible_time = 60
+                    self.projectiles.remove(proj)
+                    
+                    # Si on est dans une partie multijoueur et qu'il existe une fonction pour envoyer des données
+                    if hasattr(self, 'p2p_comm') and self.p2p_comm and hasattr(self.p2p_comm, 'envoyer_donnees'):
+                        is_server = getattr(self.p2p_comm, 'est_serveur', True)
+                        # Le serveur envoie les mises à jour du joueur 2, le client envoie les mises à jour du joueur 1
+                        if is_server:
+                            self.p2p_comm.envoyer_donnees({
+                                'type': 'damage_update',
+                                'player2_health': self.second_player.health,
+                                'player2_invincible_time': self.second_player.invincible_time,
+                                'player2_regen_rate': self.second_player.regen_rate,
+                                'player2_max_health': self.second_player.max_health
+                            })
+                        else:
+                            self.p2p_comm.envoyer_donnees({
+                                'type': 'damage_update',
+                                'player1_health': self.second_player.health,
+                                'player1_invincible_time': self.second_player.invincible_time,
+                                'player1_regen_rate': self.second_player.regen_rate,
+                                'player1_max_health': self.second_player.max_health
+                            })
 
     def draw(self, window):
         super().draw(window)
+        
+        # Dessiner les lasers entre les ennemis de type LinkEnemy
+        for enemy in enemies:
+            if isinstance(enemy, LinkEnemy) and enemy != self:
+                distance = math.hypot(self.x - enemy.x, self.y - enemy.y)
+                if distance < 300:  # Distance maximale pour les lasers
+                    alpha = max(0, min(255, int(255 * (1 - distance / 300))))
+                    laser_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+                    pygame.draw.line(laser_surface, (*self.color, alpha),
+                                   (self.x, self.y), (enemy.x, enemy.y), 3)
+                    window.blit(laser_surface, (0, 0))
 
-        # laser                  
-        for other in enemies :
-            if other.type == [LinkEnemy] :
-                pygame.draw.line(window, (230,200,200),(self.x ,self.y ),(other.x,other.y),width=20)
-
+        # Dessiner les projectiles
+        for proj in self.projectiles:
+            pygame.draw.circle(window, RED,
+                             (int(proj['x']), int(proj['y'])),
+                             proj['radius'])
 
 def spawn_wave(wave_number):
     enemies = []
     num_enemies = 3 + wave_number
 
-    test=True
-    if test:
-        types=[BasicEnemy] * 10 + [TankEnemy] * 10 + [ShooterEnemy] * 10 + [LinkEnemy] * 70
-    
+    # Distribution des types d'ennemis selon la vague
+    if wave_number < 3:
+        # Vagues 1-2 : Principalement des ennemis basiques
+        types = [BasicEnemy] * 80 + [TankEnemy] * 20
     elif wave_number < 5:
-        types = [BasicEnemy] * 70 + [TankEnemy] * 30
-    else:
+        # Vagues 3-4 : Introduction des ShooterEnemy
         types = [BasicEnemy] * 60 + [TankEnemy] * 25 + [ShooterEnemy] * 15
+    elif wave_number < 7:
+        # Vagues 5-6 : Introduction des LinkEnemy
+        types = [BasicEnemy] * 40 + [TankEnemy] * 25 + [ShooterEnemy] * 20 + [LinkEnemy] * 15
+    else:
+        # Vagues 7+ : Distribution équilibrée avec plus d'ennemis spéciaux
+        types = [BasicEnemy] * 30 + [TankEnemy] * 25 + [ShooterEnemy] * 25 + [LinkEnemy] * 20
 
+    # Garantir au moins un ennemi de chaque type dans les vagues avancées
+    if wave_number >= 5:
+        enemies = [
+            BasicEnemy(),
+            TankEnemy(),
+            ShooterEnemy(),
+            LinkEnemy()
+        ]
+        num_enemies = max(num_enemies - 4, 0)  # Ajuster le nombre d'ennemis restants
+
+    # Ajouter les ennemis aléatoires restants
     for _ in range(num_enemies):
         enemy_class = random.choice(types)
-        enemies.append(enemy_class())
+        enemy = enemy_class()
+        
+        # Positionner l'ennemi à une distance minimale des autres
+        max_attempts = 10
+        for _ in range(max_attempts):
+            # Réinitialiser la position
+            edge = random.choice(["top", "bottom", "left", "right"])
+            margin = 50
+            if edge == "top":
+                enemy.x = random.randint(margin, WIDTH - margin)
+                enemy.y = -margin
+            elif edge == "bottom":
+                enemy.x = random.randint(margin, WIDTH - margin)
+                enemy.y = HEIGHT + margin
+            elif edge == "left":
+                enemy.x = -margin
+                enemy.y = random.randint(margin, HEIGHT - margin)
+            else:  # right
+                enemy.x = WIDTH + margin
+                enemy.y = random.randint(margin, HEIGHT - margin)
+            
+            # Vérifier la distance avec les autres ennemis
+            too_close = False
+            for other in enemies:
+                dist = math.hypot(enemy.x - other.x, enemy.y - other.y)
+                if dist < 100:  # Distance minimale entre les ennemis
+                    too_close = True
+                    break
+            
+            if not too_close:
+                break
+        
+        enemies.append(enemy)
+
     return enemies
 
-def shop_upgrades(player):
-    all_upgrades = [
-        {"name": "Health Up", "effect": "Max Health +20",
-         "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
-        {"name": "Damage Up", "effect": "Bullet Damage +5",
-         "apply": lambda p: setattr(p, "damage", p.damage + 5)},
-        {"name": "Bullet Speed", "effect": "Bullet Speed +2",
-         "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},
-        {"name": "Reload Speed", "effect": "Reload Speed +20%",
-         "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
-        {"name": "Regeneration", "effect": "Health Regen +0.5/s",
-         "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
-        {"name": "Enemy Bounce", "effect": "Enemy Bounces +1",
-         "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
-        {"name": "Wall Bounce", "effect": "Wall Bounces +1",
-         "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
-        {"name": "Piercing", "effect": "Bullet Piercing +1",
-         "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
-        {"name": "Multi Shot", "effect": "Parallel Shots +1",
-         "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
-        {"name": "Shield", "effect": "Damage Reduction +5%",
-         "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
-        {"name": "Bullet Size", "effect": "Bullet Size +2",
-         "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
-        {"name": "Explosion", "effect": "Explosion Radius +10",
-         "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 10) },
-        {"name": "Range Up", "effect": "Bullet Range +100",
-         "apply": lambda p: setattr(p, "range", p.range + 100)},
-        {"name": "Body Damage", "effect": "Body Damage +5",
-         "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},
-        {"name": "Forcefield", "effect": "Forcefield Damage +2/s",
-         "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
-        {"name": "Decoy", "effect": "Double Attack Speed, Half Damage",
-         "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", p.damage / 2)]},
-        {"name": "Berserker", "effect": "Damage scales with missing health",
-         "apply": lambda p: setattr(p, "damage", p.damage + (p.max_health - p.health) / 10)}
-    ]
+# Store all_upgrades globally or pass it around if needed elsewhere
+all_upgrades_list = [
+    {"name": "Health Up", "id": "health_up", "effect": "Max Health +20",
+        "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
+    {"name": "Damage Up", "id": "damage_up", "effect": "Bullet Damage +5",
+        "apply": lambda p: setattr(p, "damage", p.damage + 5)},
+    {"name": "Bullet Speed", "id": "bullet_speed_up", "effect": "Bullet Speed +2",
+        "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},
+    {"name": "Reload Speed", "id": "reload_up", "effect": "Reload Speed +20%",
+        "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
+    {"name": "Regeneration", "id": "regen_up", "effect": "Health Regen +0.5/s",
+        "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
+    {"name": "Enemy Bounce", "id": "enemy_bounce_up", "effect": "Enemy Bounces +1",
+        "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
+    {"name": "Wall Bounce", "id": "wall_bounce_up", "effect": "Wall Bounces +1",
+        "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
+    {"name": "Piercing", "id": "piercing_up", "effect": "Bullet Piercing +1",
+        "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
+    {"name": "Multi Shot", "id": "multishot_up", "effect": "Parallel Shots +1",
+        "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
+    {"name": "Shield", "id": "shield_up", "effect": "Damage Reduction +5%",
+        "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
+    {"name": "Bullet Size", "id": "bullet_size_up", "effect": "Bullet Size +2",
+        "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
+    {"name": "Explosion", "id": "explosion_up", "effect": "Explosion Radius +10",
+        "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 10) },
+    {"name": "Range Up", "id": "range_up", "effect": "Bullet Range +100",
+        "apply": lambda p: setattr(p, "range", p.range + 100)},
+    {"name": "Body Damage", "id": "body_damage_up", "effect": "Body Damage +5",
+        "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},
+    {"name": "Forcefield", "id": "forcefield_up", "effect": "Forcefield Damage +2/s",
+        "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
+    {"name": "Decoy", "id": "decoy_up", "effect": "Double Attack Speed, Half Damage",
+        "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", max(1, p.damage / 2))]}, # Ensure damage doesn't go below 1
+    {"name": "Berserker", "id": "berserker_up", "effect": "Damage scales with missing health",
+        "apply": lambda p: setattr(p, "berserker_bonus", True)} # Add a flag, apply bonus in damage calculation/update
+]
+# Create a lookup dictionary by ID for easy access
+all_upgrades_dict = {up['id']: up for up in all_upgrades_list}
 
-    shop_upgrades = random.sample(all_upgrades, 3)
 
+def shop_upgrades(player, p2p=None, player2=None):
+    """Affiche les améliorations disponibles et applique celle choisie"""
+    # Determine if this is server (host) or client
+    is_server = p2p and p2p.est_serveur if p2p else True
+    
+    # Client waits for server's choice
+    if p2p and not is_server:
+        # Show waiting message
+        font = pygame.font.Font(None, 48)
+        waiting = True
+        
+        # Display waiting screen
+        while waiting:
+            window.fill((20, 20, 40))  # Dark blue background
+            wait_text = font.render("En attente du choix de l'hôte...", True, WHITE)
+            window.blit(wait_text, (WIDTH // 2 - wait_text.get_width() // 2, HEIGHT // 2))
+            pygame.display.flip()
+            
+            # Process events (to keep the window responsive)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return False
+            
+            # Check for network messages without blocking
+            if hasattr(p2p, 'recevoir_donnees'):
+                messages = p2p.recevoir_donnees()
+                if messages:
+                    for msg in messages:
+                        if msg.get('type') == 'upgrade_choice':
+                            upgrade_id = msg.get('upgrade_id')
+                            print(f"Client: reçu amélioration '{upgrade_id}'")
+                            
+                            # Find and apply the upgrade
+                            for upgrade in all_upgrades:
+                                if upgrade.get('id') == upgrade_id:
+                                    apply_func = upgrade.get('apply')
+                                    if apply_func:
+                                        # Apply to player ship
+                                        apply_func(player)
+                                        print(f"Amélioration appliquée au client: {upgrade.get('name')}")
+                                        
+                                        # Heal player slightly after upgrade
+                                        player.health = min(player.max_health, player.health + player.max_health * 0.2)
+                                        
+                                        waiting = False
+                                        return True
+            
+            # Short sleep to prevent excessive CPU usage
+            pygame.time.delay(50)
+        
+        return True  # Default return for client
+    
+    # Server (host) selects and applies upgrade
+    available_upgrades = random.sample(all_upgrades, min(3, len(all_upgrades)))
     font = pygame.font.Font(None, 36)
-    running = True
-    selected = None
-
-    while running:
-        window.fill((0, 0, 0))
-
-        title = font.render("Choose an Upgrade", True, WHITE)
-        window.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 4))
-
-        for i, upgrade in enumerate(shop_upgrades):
-            y_pos = HEIGHT // 2 + i * 60
-            rect = pygame.Rect(WIDTH // 4, y_pos, WIDTH // 2, 50)
-            color = YELLOW if selected == i else WHITE
-            pygame.draw.rect(window, color, rect, 2)
-
-            text = font.render(f"{i+1}. {upgrade['name']} - {upgrade['effect']}", True, color)
-            window.blit(text, (rect.x + 10, rect.y + 10))
-
+    shop_running = True
+    selected_index = None
+    
+    while shop_running:
+        window.fill((20, 20, 40))  # Dark blue background
+        
+        # Title
+        title = font.render("Choisissez une amélioration", True, WHITE)
+        title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        window.blit(title, title_rect)
+        
+        # Display available upgrades
+        for i, upgrade in enumerate(available_upgrades):
+            y_pos = HEIGHT // 2 + i * 70 - 50
+            rect = pygame.Rect(WIDTH // 4, y_pos, WIDTH // 2, 60)
+            
+            # Hover effect
+            mouse_pos = pygame.mouse.get_pos()
+            is_hovered = rect.collidepoint(mouse_pos)
+            
+            color = YELLOW if is_hovered else WHITE
+            border_width = 3 if is_hovered else 2
+            pygame.draw.rect(window, color, rect, border_width, border_radius=5)
+            
+            # Upgrade name
+            name_text = font.render(f"{i+1}. {upgrade['name']}", True, color)
+            window.blit(name_text, (rect.x + 15, rect.y + 10))
+            
+            # Upgrade effect description
+            effect_font = pygame.font.Font(None, 28)
+            effect_text = effect_font.render(upgrade['effect'], True, GRAY)
+            window.blit(effect_text, (rect.x + 15, rect.y + 35))
+        
         pygame.display.flip()
-
+        
+        # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return False
+            
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for i, upgrade in enumerate(available_upgrades):
+                    y_pos = HEIGHT // 2 + i * 70 - 50
+                    rect = pygame.Rect(WIDTH // 4, y_pos, WIDTH // 2, 60)
+                    if rect.collidepoint(event.pos):
+                        selected_index = i
+                        shop_running = False
+                        break
+            
             elif event.type == pygame.KEYDOWN:
-                if event.key in [pygame.K_1, pygame.K_2, pygame.K_3]:
-                    selected = event.key - pygame.K_1
-                    if 0 <= selected < len(shop_upgrades):
-                        upgrade = shop_upgrades[selected]
-                        upgrade["apply"](player)
-                        running = False
-                        return True
+                if pygame.K_1 <= event.key <= pygame.K_3:
+                    index = event.key - pygame.K_1
+                    if 0 <= index < len(available_upgrades):
+                        selected_index = index
+                        shop_running = False
+        
+        # Short sleep to prevent excessive CPU usage
+        pygame.time.delay(10)
+    
+    # Process the selected upgrade
+    if selected_index is not None:
+        selected_upgrade = available_upgrades[selected_index]
+        apply_func = selected_upgrade['apply']
+        
+        # Apply to host's ship
+        apply_func(player)
+        
+        # Heal player
+        player.health = min(player.max_health, player.health + player.max_health * 0.2)
+        
+        # In multiplayer, apply to player 2 (if local) and send to client
+        if p2p:
+            # If player2 is local, apply directly
+            if player2:
+                apply_func(player2)
+                player2.health = min(player2.max_health, player2.health + player2.max_health * 0.2)
+            
+            # Send upgrade choice to client
+            upgrade_id = selected_upgrade.get('id')
+            if upgrade_id:
+                p2p.envoyer_donnees({'type': 'upgrade_choice', 'upgrade_id': upgrade_id})
+                print(f"Amélioration envoyée au client: {upgrade_id}")
+        
+        return True
+    
+    return False  # No upgrade selected
 
-    return True
 
-def game_loop(selected_skin, p2p=None):
+def game_loop(selected_skin, p2p=None, remote_skin_info=None):
     global enemies
-    player_ship = Ship(selected_skin)
-    player2_ship = Ship(selected_skin)  # Deuxième joueur
-    enemies = spawn_wave(1)  # Lance la vague 1
+    
+    # Initialiser running
+    running = True
+    
+    # Initialisation du serveur/client
+    is_server = p2p and p2p.est_serveur if p2p else True
+    
+    # Créer les vaisseaux avec leurs skins respectifs
+    local_ship = None  # Vaisseau local (celui que contrôle ce joueur)
+    remote_ship = None  # Vaisseau distant (celui que contrôle l'autre joueur)
+    
+    # Création du vaisseau local
+    if isinstance(selected_skin, dict):
+        local_ship = creer_vaisseau(selected_skin)
+    else:
+        local_ship = Ship(selected_skin)
+    
+    # Marquer le vaisseau local
+    local_ship.is_local = True
+    
+    # Création du vaisseau distant si en multijoueur
+    if p2p and remote_skin_info:
+        remote_ship = creer_vaisseau(remote_skin_info)
+        # Marquer le vaisseau distant
+        remote_ship.is_local = False
+    
+    # Positions initiales des vaisseaux différentes selon serveur/client
+    server_pos = (WIDTH * 2 // 3, HEIGHT // 2)  # Position du créateur
+    client_pos = (WIDTH // 3, HEIGHT // 2)     # Position de celui qui rejoint
+    
+    # Placer les vaisseaux aux positions correctes
+    if p2p:
+        if is_server:
+            # Si je suis le serveur
+            local_ship.rect.center = server_pos   # Je me place à la position serveur
+            remote_ship.rect.center = client_pos  # L'autre joueur est à la position client
+        else:
+            # Si je suis le client
+            local_ship.rect.center = client_pos   # Je me place à la position client
+            remote_ship.rect.center = server_pos  # L'autre joueur est à la position serveur
+    else:
+        # Mode solo
+        local_ship.rect.center = (WIDTH // 2, HEIGHT // 2)
+    
+    # Initialisation des états de jeu
+    clock = pygame.time.Clock()
+    enemies = spawn_wave(1) if (is_server or not p2p) else []
+    
+    # Configurer les ennemis pour le multijoueur
+    if p2p:
+        for enemy in enemies:
+            # Donner accès à la connexion p2p aux ennemis
+            enemy.p2p_comm = p2p
+            # Pour les ennemis qui gèrent des projectiles, donner accès au second joueur
+            if isinstance(enemy, (ShooterEnemy, LinkEnemy)) and remote_ship:
+                enemy.second_player = remote_ship
+    
     wave_number = 1
     score = 0
-    credits_earned = 0  # Crédits gagnés pendant cette partie
-    running = True
+    credits_earned = 0
     font = pygame.font.Font(None, 36)
     wave_text_timer = 0
-
-    # Initialisation des vaisseaux en fonction du skin sélectionné
-        # Initialisation des vaisseaux en fonction du skin sélectionné
-    if selected_skin["name"] == "Vaisseau Doré":
-        player_ship = VaisseauDore()
-        if p2p:  # Créer le deuxième vaisseau seulement en multijoueur
-            player2_ship = VaisseauDore()
-    elif selected_skin["name"] == "Vaisseau Cristal":
-        player_ship = VaisseauCristal()
-        if p2p:
-            player2_ship = VaisseauCristal()
-    elif selected_skin["name"] == "Vaisseau Pierre":
-        player_ship = VaisseauPierre()
-        if p2p:
-            player2_ship = VaisseauPierre()
-    elif selected_skin["name"] == "Vaisseau Plasma":
-        player_ship = VaisseauPlasma()
-        if p2p:
-            player2_ship = VaisseauPlasma()
-    elif selected_skin["name"] == "Vaisseau Emeraude":
-        player_ship = VaisseauEmeraude()
-        if p2p:
-            player2_ship = VaisseauEmeraude()
-    elif selected_skin["name"] == "Vaisseau Améthyste":
-        player_ship = VaisseauAmethyste()
-        if p2p:
-            player2_ship = VaisseauAmethyste()
-    elif selected_skin["name"] == "Vaisseau Diamant":
-        player_ship = VaisseauDiamant()
-        if p2p:
-            player2_ship = VaisseauDiamant()
-    else:
-        player_ship = Ship()  # Par défaut, Vaisseau Basique
-        if p2p:
-            player2_ship = Ship()
     
-    # Thread pour recevoir les données de l'autre joueur
-    def recevoir_donnees_joueur():
-        while running:
-            if p2p:
-                donnees = p2p.recevoir_donnees()
-                if donnees:
-                    with p2p.data_lock:
-                        player2_ship.rect.x = donnees.get("x", player2_ship.rect.x)
-                        player2_ship.rect.y = donnees.get("y", player2_ship.rect.y)
-                        player2_ship.angle = donnees.get("angle", player2_ship.angle)
-                        player2_ship.bullets = donnees.get("bullets", player2_ship.bullets)
-
-    threading.Thread(target=recevoir_donnees_joueur, daemon=True).start()
-
+    # Variables réseau
+    last_network_update = 0
+    network_update_rate = 1/30  # Réduit de 60FPS à 30FPS pour de meilleures performances
+    game_over_sent = False
+    
+    # Utiliser une file d'attente thread-safe pour la communication réseau
+    network_queue = Queue() if p2p else None
+    
+    # Fonction pour recevoir les données réseau dans un thread séparé
+    def receive_data_thread(p2p_conn, queue):
+        while p2p_conn and p2p_conn.running:
+            try:
+                messages = p2p_conn.recevoir_donnees()
+                if messages:
+                    for msg in messages:
+                        queue.put(msg)
+                time.sleep(0.01)  # Petit délai pour éviter une utilisation excessive du CPU
+            except Exception as e:
+                print(f"Erreur dans le thread de réception: {e}")
+                if p2p_conn:
+                    p2p_conn.running = False
+                break
+    
+    # Démarrer le thread de réception réseau si en multijoueur
+    if p2p:
+        receive_thread = threading.Thread(target=receive_data_thread, args=(p2p, network_queue), daemon=True)
+        receive_thread.start()
+    
+    # Boucle principale du jeu
     while running:
-        window.fill((0, 0, 0))
-
+        current_time = time.time()
+        window.fill(BLACK)
+        
+        # Traitement des événements
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                if p2p and not game_over_sent:
+                    p2p.envoyer_donnees({'type': 'game_over'})
+                    game_over_sent = True
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                player_ship.shoot()
-
-        # Mise à jour des joueurs
-        player_ship.update(enemies)
-        player_ship.move()
-        player_ship.rotate_to_mouse()
-
-        # Envoyer les données du joueur à l'autre pair
-        if p2p:
-            donnees = {
-                "x": player_ship.rect.x,
-                "y": player_ship.rect.y,
-                "angle": player_ship.angle,
-                "bullets": player_ship.bullets,
-            }
-            p2p.envoyer_donnees(donnees)
-
-        # Dessiner les deux joueurs
-        player_ship.draw(window)
-        player2_ship.draw(window)
-
-        # Mise à jour des balles du joueur 1
-        for bullet in player_ship.bullets[:]:
-            bullet.move()
-            bullet.draw(window)
-
-            # Vérifier la portée de la balle
-            if bullet.distance_traveled >= bullet.max_range:
-                player_ship.bullets.remove(bullet)
-                continue
-
-            # Collision avec les murs
-            if bullet.x < 0:
-                if bullet.wall_bounces > 0:
-                    bullet.x = 0
-                    bullet.bounce_off_wall("vertical")
-                else:
-                    player_ship.bullets.remove(bullet)
-                    continue
-            elif bullet.x > WIDTH:
-                if bullet.wall_bounces > 0:
-                    bullet.x = WIDTH
-                    bullet.bounce_off_wall("vertical")
-                else:
-                    player_ship.bullets.remove(bullet)
-                    continue
-
-            if bullet.y < 0:
-                if bullet.wall_bounces > 0:
-                    bullet.y = 0
-                    bullet.bounce_off_wall("horizontal")
-                else:
-                    player_ship.bullets.remove(bullet)
-                    continue
-            elif bullet.y > HEIGHT:
-                if bullet.wall_bounces > 0:
-                    bullet.y = HEIGHT
-                    bullet.bounce_off_wall("horizontal")
-                else:
-                    player_ship.bullets.remove(bullet)
-                    continue
-
-            # Collision avec les ennemis
-            for enemy in enemies[:]:
-                if enemy not in bullet.hit_enemies:
-                    distance = math.hypot(bullet.x - enemy.x, bullet.y - enemy.y)
-                    if distance < bullet.radius + enemy.radius:
-                        # Dégâts à l'ennemi
-                        enemy.health -= bullet.damage
-                        bullet.hit_enemies.add(enemy)
-
-                        # Explosion si l'ennemi meurt
-                        if enemy.health <= 0:
-                            enemies.remove(enemy)
-                            score += 1
-                            if score % 2 == 0:  # Gagner 1 crédit tous les 2 points
-                                credits_earned += 1
-                            if bullet.explosion_radius > 0:
-                                bullet.explode(enemies)
-                        # Effets de balles
-                        if bullet.piercing > 0:
-                            bullet.piercing -= 1
-                            if bullet.piercing < 0: 
-                                player_ship.bullets.remove(bullet)
-                            break
-                        elif bullet.enemy_bounces > 0:
-                            bullet.bounce_off_enemy(enemy.x, enemy.y)
-                            if bullet.enemy_bounces < 0:
-                                player_ship.bullets.remove(bullet)
-                            break
+                # Le joueur tire avec son propre vaisseau
+                local_ship.shoot()
+        
+        # Traitement des messages réseau
+        if p2p and network_queue and not network_queue.empty():
+            while not network_queue.empty():
+                msg = network_queue.get()
+                msg_type = msg.get('type')
+                
+                if msg_type == 'state':
+                    # Mise à jour de l'état du joueur distant
+                    remote_player_data = msg.get('player')
+                    remote_bullets_data = msg.get('bullets', [])
+                    
+                    if remote_player_data and remote_ship:
+                        # Mettre à jour la position et l'état du vaisseau distant
+                        remote_ship.rect.centerx = remote_player_data.get('x', remote_ship.rect.centerx)
+                        remote_ship.rect.centery = remote_player_data.get('y', remote_ship.rect.centery)
+                        remote_ship.angle = remote_player_data.get('angle', remote_ship.angle)
+                        
+                        # Ajouter cette ligne pour synchroniser la santé du joueur distant
+                        remote_ship.health = remote_player_data.get('health', remote_ship.health)
+                        
+                        # Ajouter ceci pour synchroniser l'invincibilité
+                        remote_ship.invincible_time = remote_player_data.get('invincible_time', remote_ship.invincible_time)
+                        
+                        # Synchroniser les paramètres de régénération
+                        remote_ship.regen_rate = remote_player_data.get('regen_rate', remote_ship.regen_rate)
+                        remote_ship.max_health = remote_player_data.get('max_health', remote_ship.max_health)
+                        
+                        # Mettre à jour l'apparence du vaisseau distant
+                        remote_ship.image = pygame.transform.rotate(remote_ship.original_image, remote_ship.angle)
+                        remote_ship.rect = remote_ship.image.get_rect(center=remote_ship.rect.center)
+                        
+                        # Mettre à jour les balles du joueur distant
+                        remote_ship.bullets.clear()
+                        for b_data in remote_bullets_data:
+                            bullet = Bullet(b_data['x'], b_data['y'], b_data['angle'], remote_ship)
+                            if 'damage' in b_data: bullet.damage = b_data['damage']
+                            if 'radius' in b_data: bullet.radius = b_data['radius']
+                            if 'piercing' in b_data: bullet.piercing = b_data['piercing']
+                            if 'enemy_bounces' in b_data: bullet.enemy_bounces = b_data['enemy_bounces']
+                            if 'wall_bounces' in b_data: bullet.wall_bounces = b_data['wall_bounces']
+                            remote_ship.bullets.append(bullet)
+                    
+                    # Le client reçoit l'état des ennemis du serveur
+                    if not is_server:
+                        server_enemies_data = msg.get('enemies', [])
+                        enemies.clear()  # Effacer les ennemis actuels
+                        
+                        for enemy_data in server_enemies_data:
+                            enemy = create_enemy_from_data(enemy_data)
+                            if enemy:
+                                enemies.append(enemy)
+                        
+                        # Mettre à jour le numéro de vague
+                        wave_number = msg.get('wave', wave_number)
+                        
+                        # Pour le client, vérifier si une collision avec un ennemi s'est produite
+                        # et envoyer une mise à jour au serveur si sa santé a changé
+                        if remote_ship and local_ship.health < remote_player_data.get('health', local_ship.health):
+                            p2p.envoyer_donnees({
+                                'type': 'damage_update',
+                                'player1_health': local_ship.health,
+                                'player1_invincible_time': local_ship.invincible_time,
+                                'player1_regen_rate': local_ship.regen_rate,
+                                'player1_max_health': local_ship.max_health
+                            })
+                
+                elif msg_type == 'upgrade_choice':
+                    # Appliquer l'amélioration choisie par l'hôte
+                    if not is_server:
+                        upgrade_id = msg.get('upgrade_id')
+                        
+                        # Obtenir la fonction d'amélioration à partir de l'ID
+                        upgrade_func = None
+                        for upgrade in all_upgrades:
+                            if upgrade.get('id') == upgrade_id:
+                                upgrade_func = upgrade.get('apply')
+                                break
+                        
+                        if upgrade_func:
+                            # Appliquer aux deux vaisseaux
+                            upgrade_func(local_ship)
+                            if remote_ship:
+                                upgrade_func(remote_ship)
                         else:
-                            player_ship.bullets.remove(bullet)
-                            break
-
-        # Mise à jour des ennemis
-        for enemy in enemies[:]:
-            enemy.update(player_ship)  # Ajouter le joueur pour les ennemis tireurs
-            enemy.move_towards(player_ship)
+                            print(f"Amélioration {upgrade_id} inconnue")
+                
+                elif msg_type == 'damage_update':
+                    # Mise à jour spécifique pour la santé du joueur 2 (côté client) ou joueur 1 (côté serveur)
+                    if not is_server and remote_ship:
+                        # Le client met à jour la santé de son joueur local (joueur 2 vu du serveur)
+                        local_ship.health = msg.get('player2_health', local_ship.health)
+                        local_ship.invincible_time = msg.get('player2_invincible_time', local_ship.invincible_time)
+                        local_ship.regen_rate = msg.get('player2_regen_rate', local_ship.regen_rate)
+                        local_ship.max_health = msg.get('player2_max_health', local_ship.max_health)
+                    elif is_server and remote_ship:
+                        # Le serveur met à jour le joueur distant (joueur 1 vu du client)
+                        remote_ship.health = msg.get('player1_health', remote_ship.health)
+                        remote_ship.invincible_time = msg.get('player1_invincible_time', remote_ship.invincible_time)
+                        remote_ship.regen_rate = msg.get('player1_regen_rate', remote_ship.regen_rate)
+                        remote_ship.max_health = msg.get('player1_max_health', remote_ship.max_health)
+                
+                elif msg_type == 'game_over':
+                    running = False
+                    show_game_over(score, credits_earned)
+                    break
+        
+        # Vérifier si les joueurs sont morts
+        if local_ship.health <= 0 or (remote_ship and remote_ship.health <= 0):
+            # Si un des deux joueurs est mort, c'est game over
+            if p2p and not game_over_sent:
+                p2p.envoyer_donnees({'type': 'game_over'})
+                game_over_sent = True
+            running = False
+            show_game_over(score, credits_earned)
+            break
+        
+        # Mise à jour des mouvements
+        if running:
+            # Mise à jour du vaisseau local (contrôlé par ce joueur)
+            local_ship.update(enemies)
+            local_ship.move()         # Contrôle du mouvement avec les touches
+            local_ship.rotate_to_mouse() # Contrôle de la rotation avec la souris
+            
+            # Mise à jour du vaisseau distant (pas de contrôle direct)
+            if remote_ship:
+                remote_ship.update(enemies)
+            
+            # Empêcher la santé négative
+            local_ship.health = max(0, local_ship.health)
+            if remote_ship:
+                remote_ship.health = max(0, remote_ship.health)
+        
+        # Envoyer l'état du joueur via le réseau
+        if p2p and running and current_time - last_network_update >= network_update_rate:
+            # Envoyer l'état du vaisseau local
+            player_state = {
+                'type': 'state',
+                'player': {
+                    'x': local_ship.rect.centerx,
+                    'y': local_ship.rect.centery,
+                    'angle': local_ship.angle,
+                    'health': local_ship.health,
+                    'invincible_time': local_ship.invincible_time,
+                    'regen_rate': local_ship.regen_rate,  # Ajouter le taux de régénération
+                    'max_health': local_ship.max_health   # Ajouter la santé maximale
+                },
+                'bullets': [{
+                    'x': b.x, 'y': b.y, 'angle': b.angle, 'damage': b.damage,
+                    'radius': b.radius, 'piercing': b.piercing,
+                    'enemy_bounces': b.enemy_bounces, 'wall_bounces': b.wall_bounces
+                } for b in local_ship.bullets]
+            }
+            
+            # Le serveur envoie aussi l'état des ennemis
+            if is_server:
+                player_state.update({
+                    'enemies': [{
+                        'id': id(e),
+                        'x': e.x, 'y': e.y, 'health': e.health, 'type': e.__class__.__name__
+                    } for e in enemies],
+                    'wave': wave_number
+                })
+            
+            p2p.envoyer_donnees(player_state)
+            last_network_update = current_time
+        
+        # Mettre à jour les balles
+        if running:
+            update_bullets(local_ship, enemies)
+            if remote_ship:
+                update_bullets(remote_ship, enemies)
+        
+        # Mettre à jour les ennemis (serveur uniquement en multijoueur)
+        if running and (is_server or not p2p):
+            for enemy in enemies[:]:
+                # Déterminer la cible (joueur le plus proche en multijoueur)
+                target_player = local_ship
+                if remote_ship:
+                    dist1 = math.hypot(enemy.x - local_ship.rect.centerx, enemy.y - local_ship.rect.centery)
+                    dist2 = math.hypot(enemy.x - remote_ship.rect.centerx, enemy.y - remote_ship.rect.centery)
+                    target_player = local_ship if dist1 < dist2 else remote_ship
+                    
+                    # Configurer les ennemis pour qu'ils puissent accéder aux deux joueurs
+                    if isinstance(enemy, (ShooterEnemy, LinkEnemy)):
+                        # Second player est toujours le joueur non-ciblé pour l'update
+                        enemy.second_player = remote_ship if target_player == local_ship else local_ship
+                        # Donner accès à la connexion p2p si nous sommes en multijoueur
+                        if p2p:
+                            enemy.p2p_comm = p2p
+                
+                enemy.update(target_player)
+                
+                # Vérifier la collision avec les joueurs
+                if enemy.check_collision(local_ship):
+                    # S'assurer que la santé est limitée
+                    local_ship.health = max(0, local_ship.health)
+                
+                if remote_ship and enemy.check_collision(remote_ship):
+                    # S'assurer que la santé est limitée
+                    remote_ship.health = max(0, remote_ship.health)
+                    
+                    # Si on est le serveur, envoyer immédiatement une mise à jour de la santé de player 2
+                    if is_server and p2p:
+                        p2p.envoyer_donnees({
+                            'type': 'damage_update',
+                            'player2_health': remote_ship.health,
+                            'player2_invincible_time': remote_ship.invincible_time,
+                            'player2_regen_rate': remote_ship.regen_rate,
+                            'player2_max_health': remote_ship.max_health
+                        })
+                
+                # Supprimer les ennemis morts
+                if enemy.health <= 0:
+                    if enemy in enemies:
+                        enemies.remove(enemy)
+                        score += 10
+                        credits_earned += 1
+        
+        # Dessiner les éléments du jeu
+        local_ship.draw(window)
+        if remote_ship:
+            remote_ship.draw(window)
+        
+        for enemy in enemies:
             enemy.draw(window)
-
-            enemy.check_collision(player_ship)
-            if player_ship.health <= 0:
-                running = False
-                show_game_over(score, credits_earned)
-                break
-
-        # Nouvelle vague
-        if len(enemies) == 0:
-            wave_number += 1
-            if not shop_upgrades(player_ship):
-                running = False
-                break
-            enemies = spawn_wave(wave_number)
-            wave_text_timer = 120
-
+        
+        # Dessiner les balles
+        for bullet in local_ship.bullets:
+            bullet.draw(window)
+        if remote_ship:
+            for bullet in remote_ship.bullets:
+                bullet.draw(window)
+        
+        # Dessiner les informations de jeu
+        draw_game_info(window, font, score, local_ship, wave_number, wave_text_timer, remote_ship)
+        
+        # Minuteur de texte de vague
         if wave_text_timer > 0:
-            wave_text = font.render(f"Wave {wave_number}", True, WHITE)
-            window.blit(wave_text, (WIDTH // 2 - wave_text.get_width() // 2, HEIGHT // 2))
             wave_text_timer -= 1
+        
+        # Nouvelle vague quand tous les ennemis sont vaincus
+        if running and (is_server or not p2p) and len(enemies) == 0:
+            wave_number += 1
+            
+            # Afficher l'écran d'amélioration
+            upgrade_result = shop_upgrades(local_ship, p2p, remote_ship)
+            if not upgrade_result:
+                running = False
+                if p2p and not game_over_sent:
+                    p2p.envoyer_donnees({'type': 'game_over'})
+                    game_over_sent = True
+            else:
+                # Générer une nouvelle vague
+                enemies = spawn_wave(wave_number)
+                
+                # Configurer les ennemis pour le multijoueur
+                if p2p:
+                    for enemy in enemies:
+                        # Donner accès à la connexion p2p aux ennemis
+                        enemy.p2p_comm = p2p
+                        if isinstance(enemy, (ShooterEnemy, LinkEnemy)) and remote_ship:
+                            enemy.second_player = remote_ship
+                            
+                wave_text_timer = 120
+        
+        pygame.display.flip()
+        clock.tick(60)  # Limiter à 60 FPS pour l'affichage
+    
+    # Nettoyage de fin de partie
+    if p2p:
+        p2p.fermer()
+    
+    # Sauvegarder les crédits gagnés
+    shop.credits += credits_earned
+    save_data(shop.credits, shop.selected_skin, shop.skins)
 
-        # Statistiques à gauche
-        score_text = font.render(f"Score: {score}", True, WHITE)
-        health_text = font.render(f"Health: {int(player_ship.health)}/{player_ship.max_health}", True, GREEN)
-        credits_text = font.render(f"Crédits: {credits_earned}", True, YELLOW)
-        window.blit(score_text, (10, 10))
-        window.blit(health_text, (10, 50))
-        window.blit(credits_text, (10, 90))
 
-        # Dernières 3 upgrades
-        upgrade_y = 130
-        for upgrade in player_ship.upgrades[-3:]:
-            upgrade_text = font.render(upgrade, True, YELLOW)
-            window.blit(upgrade_text, (10, upgrade_y))
-            upgrade_y += 30
+# --- Modify update_bullets to return score ---
+def update_bullets(ship, enemies):
+    score_from_bullets = 0
+    for bullet in ship.bullets[:]:
+        bullet.move()
 
-        # Stats (à modifier)
-        stats = [
-            f"Damage: {player_ship.damage}",
-            f"Speed: {player_ship.speed}",
-            f"Range: {player_ship.range}",
-            f"Bullet Speed: {player_ship.bullet_speed}",
-            f"Reload Speed: {player_ship.reload_speed:.1f}x",
-            f"Regeneration: {player_ship.regen_rate:.1f}/s",
-            f"Enemy Bounces: {player_ship.enemy_bounces}",
-            f"Wall Bounces: {player_ship.wall_bounces}",
-            f"Bullet Piercing: {player_ship.bullet_piercing}",
-            f"Parallel Shots: {player_ship.parallel_shots}",
-            f"Shield: {player_ship.shield}%",
-            f"Bullet Size: {player_ship.bullet_size}",
-            f"Explosion Radius: {player_ship.explosion_radius}",
-            f"Bullet Range: {player_ship.range}",
-            f"Body Damage: {player_ship.body_damage}",
-            f"Forcefield Damage: {player_ship.forcefield_damage}/s"
-        ]
+        # Range check
+        if bullet.distance_traveled >= bullet.max_range:
+            bullet.explode(enemies) 
+            if bullet in ship.bullets: ship.bullets.remove(bullet)
+            continue
+            
+        # Wall collision
+        wall_collided = False
+        if bullet.x - bullet.radius < 0 or bullet.x + bullet.radius > WIDTH:
+            if bullet.wall_bounces > 0:
+                bullet.bounce_off_wall("vertical")
+                bullet.x = max(bullet.radius, min(WIDTH - bullet.radius, bullet.x)) 
+            else: wall_collided = True
+        elif bullet.y - bullet.radius < 0 or bullet.y + bullet.radius > HEIGHT:
+             if bullet.wall_bounces > 0:
+                 bullet.bounce_off_wall("horizontal")
+                 bullet.y = max(bullet.radius, min(HEIGHT - bullet.radius, bullet.y))
+             else: wall_collided = True
+        
+        if wall_collided:
+             bullet.explode(enemies)
+             if bullet in ship.bullets: ship.bullets.remove(bullet)
+             continue
 
-        stat_y = 200
-        for stat in stats:
-            stat_text = font.render(stat, True, WHITE)
-            window.blit(stat_text, (10, stat_y))
-            stat_y += 25
+        # Enemy collision
+        enemies_hit_this_step = set() # Track enemies hit in this specific step/frame
 
+        for enemy in enemies[:]:
+            if enemy in bullet.hit_enemies and bullet.piercing <= 0 and bullet.enemy_bounces <= 0: 
+                 continue 
+
+            distance = math.hypot(bullet.x - enemy.x, bullet.y - enemy.y)
+            if distance < bullet.radius + enemy.radius:
+                if enemy not in enemies_hit_this_step:
+                     actual_damage = bullet.damage 
+                     # Apply berserker bonus if applicable
+                     if hasattr(ship, 'berserker_bonus') and ship.berserker_bonus:
+                         missing_health_ratio = (ship.max_health - ship.health) / ship.max_health
+                         bonus_damage = actual_damage * missing_health_ratio # Example: up to double damage at 0 health
+                         actual_damage += bonus_damage
+
+                     enemy.health -= actual_damage
+                     bullet.hit_enemies.add(enemy) 
+                     enemies_hit_this_step.add(enemy)
+
+                     if enemy.health <= 0:
+                          pass 
+
+                     # Handle piercing/bouncing AFTER damage application
+                     if bullet.piercing > 0:
+                          bullet.piercing -= 1
+                          # Bullet continues, can hit another enemy in the same step if close enough
+                     elif bullet.enemy_bounces > 0:
+                          bullet.bounce_off_enemy(enemy.x, enemy.y)
+                          bullet.hit_enemies.clear()
+                          bullet.hit_enemies.add(enemy) 
+                     else:
+                          # No piercing or bounces left, bullet should be destroyed
+                          bullet.explode(enemies) 
+                          if bullet in ship.bullets:
+                              ship.bullets.remove(bullet)
+                          break
+
+
+        # Update explosion animation
+        if bullet in ship.bullets and bullet.is_exploding:
+            bullet.explode(enemies) # Continue drawing/updating explosion
+            if bullet.explosion_time <= 0: 
+                 if bullet in ship.bullets:
+                     ship.bullets.remove(bullet)
+
+    return score_from_bullets # Return score calculated from bullet hits (currently 0, main loop handles score)
+
+
+def show_game_over(score, credits_earned):
+    """Affiche l'écran de fin de partie"""
+    running = True
+    font_large = pygame.font.Font(None, 72)
+    font_medium = pygame.font.Font(None, 48)
+    font_small = pygame.font.Font(None, 36)
+    
+    # Textes
+    game_over_text = font_large.render("GAME OVER", True, RED)
+    score_text = font_medium.render(f"Score: {score}", True, WHITE)
+    credits_text = font_medium.render(f"Crédits gagnés: {credits_earned}", True, WHITE)
+    continue_text = font_small.render("Appuyez sur une touche pour continuer", True, GRAY)
+    
+    # Minuteur pour rester un minimum sur l'écran de game over
+    min_display_time = 180  # 3 secondes à 60 FPS
+    start_time = pygame.time.get_ticks()
+    
+    while running:
+        current_time = pygame.time.get_ticks()
+        elapsed_time = current_time - start_time
+        
+        # Traitement des événements
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            
+            # Continuer après le délai minimum
+            if elapsed_time >= min_display_time:
+                if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                    running = False
+        
+        # Dessin
+        window.fill((20, 20, 40))  # Fond bleu foncé
+        
+        # Affichage des textes centrés
+        window.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 3))
+        window.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 2))
+        window.blit(credits_text, (WIDTH // 2 - credits_text.get_width() // 2, HEIGHT // 2 + 60))
+        
+        # Afficher le message "continuer" uniquement après le délai minimum
+        if elapsed_time >= min_display_time:
+            window.blit(continue_text, (WIDTH // 2 - continue_text.get_width() // 2, HEIGHT * 3 // 4))
+        
         pygame.display.flip()
         pygame.time.Clock().tick(60)
 
-    # Après la fin de la partie, ajouter les crédits gagnés à la boutique
-    shop.credits += credits_earned
-    save_data(shop.credits, shop.selected_skin, shop.skins)  # Sauvegarder les crédits, le skin sélectionné et les skins débloqués
-    show_game_over(score, credits_earned)
+def create_enemy_from_data(enemy_data):
+    """Crée un ennemi à partir des données reçues par le réseau"""
+    enemy_type = enemy_data.get('type')
+    enemy = None
+    
+    # Créer le bon type d'ennemi
+    if enemy_type == 'BasicEnemy':
+        enemy = BasicEnemy()
+    elif enemy_type == 'TankEnemy':
+        enemy = TankEnemy()
+    elif enemy_type == 'ShooterEnemy':
+        enemy = ShooterEnemy()
+    elif enemy_type == 'LinkEnemy':
+        enemy = LinkEnemy()
+        return None
+    
+    # Mettre à jour les propriétés de l'ennemi
+    if enemy:
+        enemy.x = enemy_data.get('x', enemy.x)
+        enemy.y = enemy_data.get('y', enemy.y)
+        enemy.health = enemy_data.get('health', enemy.health)
+        
+        # Gérer les propriétés spécifiques aux types d'ennemis
+        if enemy_type == 'ShooterEnemy' or enemy_type == 'LinkEnemy':
+            if 'projectiles' in enemy_data:
+                enemy.projectiles = enemy_data.get('projectiles', [])
+            if 'target_x' in enemy_data:
+                enemy.target_x = enemy_data.get('target_x')
+                enemy.target_y = enemy_data.get('target_y')
+    
+    return enemy
 
-def show_game_over(score, credits_earned):
-    font = pygame.font.Font(None, 48)
-    game_over_text = font.render("Game Over", True, RED)
+# Variable globale pour stocker les améliorations disponibles
+all_upgrades = [
+    {"name": "Health Up", "id": "health_up", "effect": "Max Health +20",
+        "apply": lambda p: setattr(p, "max_health", p.max_health + 20)},
+    {"name": "Damage Up", "id": "damage_up", "effect": "Bullet Damage +5",
+        "apply": lambda p: setattr(p, "damage", p.damage + 5)},
+    {"name": "Bullet Speed", "id": "bullet_speed_up", "effect": "Bullet Speed +2",
+        "apply": lambda p: setattr(p, "bullet_speed", p.bullet_speed + 2)},
+    {"name": "Reload Speed", "id": "reload_up", "effect": "Reload Speed +20%",
+        "apply": lambda p: setattr(p, "reload_speed", p.reload_speed + 0.2)},
+    {"name": "Regeneration", "id": "regen_up", "effect": "Health Regen +0.5/s",
+        "apply": lambda p: setattr(p, "regen_rate", p.regen_rate + 0.5)},
+    {"name": "Enemy Bounce", "id": "enemy_bounce_up", "effect": "Enemy Bounces +1",
+        "apply": lambda p: setattr(p, "enemy_bounces", p.enemy_bounces + 1)},
+    {"name": "Wall Bounce", "id": "wall_bounce_up", "effect": "Wall Bounces +1",
+        "apply": lambda p: setattr(p, "wall_bounces", p.wall_bounces + 1)},
+    {"name": "Piercing", "id": "piercing_up", "effect": "Bullet Piercing +1",
+        "apply": lambda p: setattr(p, "bullet_piercing", p.bullet_piercing + 1)},
+    {"name": "Multi Shot", "id": "multishot_up", "effect": "Parallel Shots +1",
+        "apply": lambda p: setattr(p, "parallel_shots", p.parallel_shots + 1)},
+    {"name": "Shield", "id": "shield_up", "effect": "Damage Reduction +5%",
+        "apply": lambda p: setattr(p, "shield", min(75, p.shield + 5))},
+    {"name": "Bullet Size", "id": "bullet_size_up", "effect": "Bullet Size +2",
+        "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
+    {"name": "Explosion", "id": "explosion_up", "effect": "Explosion Radius +10",
+        "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 10)},
+    {"name": "Range Up", "id": "range_up", "effect": "Bullet Range +100",
+        "apply": lambda p: setattr(p, "range", p.range + 100)},
+    {"name": "Body Damage", "id": "body_damage_up", "effect": "Body Damage +5",
+        "apply": lambda p: setattr(p, "body_damage", p.body_damage + 5)},
+    {"name": "Forcefield", "id": "forcefield_up", "effect": "Forcefield Damage +2/s",
+        "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
+    {"name": "Decoy", "id": "decoy_up", "effect": "Double Attack Speed, Half Damage",
+        "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed * 2), setattr(p, "damage", max(1, p.damage / 2))]},
+    {"name": "Berserker", "id": "berserker_up", "effect": "Damage scales with missing health",
+        "apply": lambda p: setattr(p, "berserker_bonus", True)}
+]
+
+def draw_game_info(window, font, score, player, wave_number, wave_text_timer, player2=None):
+    """Affiche les informations de jeu (score, santé, vague)"""
+    # Score
     score_text = font.render(f"Score: {score}", True, WHITE)
-    credits_text = font.render(f"Crédits gagnés: {credits_earned}", True, YELLOW)
-    restart_text = font.render("Press SPACE to Restart", True, GREEN)
-    menu_text = font.render("Press M for Main Menu", True, BLUE)
+    window.blit(score_text, (20, 20))
+    
+    # Numéro de vague
+    wave_text = font.render(f"Vague: {wave_number}", True, WHITE)
+    window.blit(wave_text, (WIDTH - wave_text.get_width() - 20, 20))
+    
+    # Affichage du texte de nouvelle vague
+    if wave_text_timer > 0:
+        wave_announcement = font.render(f"Vague {wave_number}", True, YELLOW)
+        wave_rect = wave_announcement.get_rect(center=(WIDTH//2, HEIGHT//3))
+        window.blit(wave_announcement, wave_rect)
+    
+    # Barre de vie du joueur 1
+    health_width = 200
+    health_height = 20
+    health_x = 20
+    health_y = HEIGHT - 30
+    
+    # Fond gris
+    pygame.draw.rect(window, GRAY, (health_x, health_y, health_width, health_height))
+    
+    # Calcul du ratio de santé
+    health_ratio = max(0, player.health / player.max_health)
+    current_health_width = int(health_width * health_ratio)
+    
+    # Couleur basée sur la santé restante
+    if health_ratio > 0.7:
+        health_color = GREEN
+    elif health_ratio > 0.3:
+        health_color = YELLOW
+    else:
+        health_color = RED
+    
+    # Barre de vie
+    pygame.draw.rect(window, health_color, (health_x, health_y, current_health_width, health_height))
+    
+    # Texte de santé
+    health_text = font.render(f"{int(player.health)}/{int(player.max_health)}", True, WHITE)
+    window.blit(health_text, (health_x + 10, health_y - 25))
+    
+    # Barre de vie du joueur 2 (si présent)
+    if player2:
+        p2_health_x = WIDTH - health_width - 20
+        p2_health_y = HEIGHT - 30
+        
+        # Fond gris
+        pygame.draw.rect(window, GRAY, (p2_health_x, p2_health_y, health_width, health_height))
+        
+        # Ratio de santé du joueur 2
+        p2_health_ratio = max(0, player2.health / player2.max_health)
+        p2_current_health_width = int(health_width * p2_health_ratio)
+        
+        # Couleur basée sur la santé restante
+        if p2_health_ratio > 0.7:
+            p2_health_color = GREEN
+        elif p2_health_ratio > 0.3:
+            p2_health_color = YELLOW
+        else:
+            p2_health_color = RED
+        
+        # Barre de vie
+        pygame.draw.rect(window, p2_health_color, (p2_health_x, p2_health_y, p2_current_health_width, health_height))
+        
+        # Texte de santé
+        p2_health_text = font.render(f"{int(player2.health)}/{int(player2.max_health)}", True, WHITE)
+        window.blit(p2_health_text, (p2_health_x + 10, p2_health_y - 25))
+        
+        # Indicateurs "Joueur 1" et "Joueur 2"
+        p1_label = font.render("Joueur 1", True, WHITE)
+        p2_label = font.render("Joueur 2", True, WHITE)
+        window.blit(p1_label, (health_x, health_y - 50))
+        window.blit(p2_label, (p2_health_x, p2_health_y - 50))
 
-    window.fill((0, 0, 0))
-    window.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - 100))
-    window.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 2 - 50))
-    window.blit(credits_text, (WIDTH // 2 - credits_text.get_width() // 2, HEIGHT // 2))
-    window.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 + 50))
-    window.blit(menu_text, (WIDTH // 2 - menu_text.get_width() // 2, HEIGHT // 2 + 100))
-    pygame.display.flip()
+def creer_vaisseau(skin_info):
+    # Vérifier si skin_info est une chaîne ou un dictionnaire
+    if isinstance(skin_info, str):
+        skin_name = skin_info
+    elif isinstance(skin_info, dict):
+        skin_name = skin_info.get('name', 'Vaisseau Basique')
+    else:
+        # Type inconnu, utiliser le vaisseau par défaut
+        return Ship()
+    
+    
+    if skin_name == "Vaisseau Doré" or skin_name == "Vaisseau Dore":
+        return VaisseauDore()
+    elif skin_name == "Vaisseau Cristal":
+        return VaisseauCristal()
+    elif skin_name == "Vaisseau Pierre":
+        return VaisseauPierre()
+    elif skin_name == "Vaisseau Plasma":
+        return VaisseauPlasma()
+    elif skin_name == "Vaisseau Emeraude":
+        return VaisseauEmeraude()
+    elif skin_name == "Vaisseau Améthyste" or skin_name == "Vaisseau Amethyste":
+        return VaisseauAmethyste()
+    elif skin_name == "Vaisseau Diamant":
+        return VaisseauDiamant()
+    else:
+        # Par défaut, retourner le vaisseau basique
+        return Ship()
 
+# Cette fonction doit être placée avant la fonction game_loop qui l'utilise
 
-# Crée le Shop et exécute la boucle principale
-shop = Shop()
-shop.run(window)
+if __name__ == '__main__':
+     shop = Shop()
+     shop.run(window)
+     pygame.quit()
