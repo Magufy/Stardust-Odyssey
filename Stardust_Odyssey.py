@@ -2,6 +2,10 @@ import pygame
 import random
 import math
 import json
+import socket
+import threading
+import time
+from queue import Queue
 
 pygame.init()
 
@@ -53,7 +57,7 @@ def load_data():
                 )
             
     except FileNotFoundError:
-        return 5000, None, []  # Valeurs par défaut si le fichier n'existe pas           
+        return 5000, Ship() , []  # Valeurs par défaut si le fichier n'existe pas           
 
 class Button:
     def __init__(self, x, y, width, height, text, color):
@@ -84,7 +88,7 @@ class Shop:
         self.credits, self.selected_skin, unlocked_skins = load_data()  # Charger les crédits, le skin sélectionné et les skins débloqués
         self.pub_used = False
 
-        self.grid_size = (4, 2)
+        self.grid_size = (3, 2)
         self.margin = 50
         self.padding = 20
 
@@ -95,12 +99,10 @@ class Shop:
 
         self.skins = [
             {"name": "Vaisseau Basique", "price": "gratuit", "unlocked": True, "preview_color": BLUE},
-            {"name": "Vaisseau Doré", "price": 1000, "unlocked": False, "preview_color": GOLD},
             {"name": "Vaisseau Cristal", "price": 2000, "unlocked": False, "preview_color": (150, 200, 255)},
-            {"name": "Vaisseau Pierre", "price": 30, "unlocked" : False, "preview_color": GRAY},
+            {"name": "Vaisseau Améthyste", "price": 120, "unlocked": False, "preview_color": (200,0,200)},
             {"name": "Vaisseau Plasma", "price": 50, "unlocked": False, "preview_color": (255, 100, 255)}, #unlock test x100prix
             {"name": "Vaisseau Emeraude", "price": 100,"unlocked":False,"preview_color": (0,255,50)},  #unlock test
-            {"name": "Vaisseau Améthyste", "price": 120, "unlocked": False, "preview_color": (200,0,200)},
             {"name": "Vaisseau Diamant", "price": "PUB", "unlocked": False, "preview_color": (0,255,255)}
         ]
 
@@ -376,14 +378,6 @@ class Ship:
         else:
             window.blit(self.image, self.rect)
 
-class VaisseauDore(Ship):
-    def __init__(self):
-        super().__init__()
-        self.speed += 0.5
-        self.health -= 50
-        self.max_health -= 50
-        self.range -+ 100
-        pygame.draw.polygon(self.image, GOLD, [(20, 0), (0, 40), (40, 40)])
 
 class VaisseauCristal(Ship):
     def __init__(self):
@@ -397,16 +391,16 @@ class VaisseauCristal(Ship):
         self.bullet_speed -= 5
         pygame.draw.polygon(self.image, (150, 200, 255), [(20, 0), (0, 40), (40, 40)])
 
-class VaisseauPierre(Ship):
+class VaisseauAmethyste(Ship):
     def __init__(self):
         super().__init__()
-        self.speed+=0.5
-        self.health+=250
-        self.max_health+=250
-        self.regen_rate+=5
-        self.body_damage=20
-        self.damage=1    
-        pygame.draw.polygon(self.image, (50, 20, 55), [(20, 0), (0, 40), (40, 40)])
+        self.health-=50
+        self.max_health-=50
+        self.speed+=1
+        self.bullet_speed+=5
+        self.reload_speed+=0.5
+        self.damage-=2
+        pygame.draw.polygon(self.image, (250, 15, 255), [(20, 0), (0, 40), (40, 40)])
 
 class VaisseauPlasma(Ship):
     def __init__(self):
@@ -427,17 +421,6 @@ class VaisseauEmeraude(Ship) :
         self.range+=2700
         self.speed-=0.4
         pygame.draw.polygon(self.image, (15, 250, 30), [(20, 0), (0, 40), (40, 40)])
-
-class VaisseauAmethyste(Ship):
-    def __init__(self):
-        super().__init__()
-        self.health-=50
-        self.max_health-=50
-        self.speed+=1
-        self.bullet_speed+=5
-        self.reload_speed+=0.5
-        self.damage-=2
-        pygame.draw.polygon(self.image, (250, 15, 255), [(20, 0), (0, 40), (40, 40)])
 
 class VaisseauDiamant(Ship):
     def __init__(self):
@@ -1135,6 +1118,92 @@ class Laser_Boss(Enemy):
             pygame.draw.circle(window, RED, (int(proj['x']), int(proj['y'])), proj['radius'])
 
 class Mothership_Boss(Enemy) :
+
+    def __init__(self):
+        super().__init__()
+        self.radius = 200
+        self.speed = 3
+        self.health = 300 #test
+        self.maxhealth=3000
+        self.damage = 40
+        self.color = (0,255,0)
+        self.type= [Mothership_Boss]
+        self.bossname= "MOTHERSHEEP"
+
+        self.shoot_cooldown = 6
+        self.projectiles = []
+    
+        self.target_x = random.randint(200,WIDTH-200)
+        self.target_y = random.randint(200,HEIGHT-200)
+        
+        self.healthbar=True
+
+    def update(self, player):
+        dx = self.target_x - self.x
+        dy = self.target_y - self.y
+        distance = math.hypot(dx, dy)
+
+    # Déplacement vers le centre uniquement si nécessaire
+        if distance > 5:
+            self.x += (dx / distance) * self.speed
+            self.y += (dy / distance) * self.speed
+        else:
+            self.shoot_cooldown = max(0, self.shoot_cooldown - 1)  # Décrémentation correcte du cooldown
+
+            if self.shoot_cooldown == 0:  # Seulement si le cooldown est à 0
+        
+                
+
+                if self.health <= 20:  # Rapidfire
+                    dx = player.rect.centerx - self.x
+                    dy = player.rect.centery - self.y
+                    angle = math.atan2(-dy, dx)
+                    self.projectiles.append({
+                            'x': self.x,
+                            'y': self.y,
+                            'angle': angle,
+                            'speed': 5,
+                            'radius': 20,
+                            'damage':5})
+                    self.shoot_cooldown = 30
+
+                elif self.health <= 40 :
+                    add_types=[BasicEnemy] * 50 + [TankEnemy] * 25 + [ShooterEnemy] * 25
+                    add_spawn = random.choice(add_types)
+                    enemies.append(add_spawn)
+                
+        # Update projectiles
+        for proj in self.projectiles[:]:
+            proj['x'] += proj['speed'] * math.cos(proj['angle'])
+            proj['y'] -= proj['speed'] * math.sin(proj['angle'])
+
+            # Hors de l'ecran
+            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
+                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
+                self.projectiles.remove(proj)
+                continue
+
+            if proj['x'] <= 0 :
+                proj['x'] = WIDTH-5
+            if proj['x'] >= WIDTH :
+                proj['x'] = 5            
+            if proj['y'] <= 0 :
+                proj['y'] = HEIGHT-5                
+            if proj['y'] >= HEIGHT :
+                proj['y'] = 5
+                
+
+            # collision au joueur en ignorant sa periode d'invincibilité
+            dist = math.hypot(player.rect.centerx - proj['x'],
+                            player.rect.centery - proj['y'])
+            if dist < proj['radius'] + 20:
+                damage = proj['damage'] * (1 - player.shield / 100)
+                player.health -= damage
+                self.projectiles.remove(proj)
+            
+            proj['radius']-=0.02
+            if proj['radius']<3:
+                self.projectiles.remove(proj)
     pass
 
 
@@ -1164,7 +1233,7 @@ def spawn_wave(wave_number):
     elif cycle_wave == 15:
         enemies.append(Laser_Boss())
         return enemies,cycle
-    elif cycle_wave == 20 :
+    elif cycle_wave == 2 :
         enemies.append(Mothership_Boss())
         return enemies,cycle
         #else wave 20 donc boss final
@@ -1173,6 +1242,7 @@ def spawn_wave(wave_number):
             enemy_class = random.choice(types)
             enemies.append(enemy_class())
         return enemies,cycle
+
 
 all_upgrades = [
         {"name": "Health Up", "effect": "Max Health +20","niveau":1,"niveaumax":5,
@@ -1229,11 +1299,11 @@ all_upgrades = [
         {"name": "Speed", "effect": "FASTER","niveau":1,"niveaumax":5,
          "apply": lambda p: setattr(p, "speed", p.speed + p.speed*0.1)},         
     ]
+game_upgrades=all_upgrades
 
+def shop_upgrades(player,game_upgrades):
 
-def shop_upgrades(player,all_upgrades):
-
-    shop_upgrades = random.sample(all_upgrades, 3)
+    shop_upgrades = random.sample(game_upgrades, 3)
 
     font = pygame.font.Font(None, 36)
     running = True
@@ -1270,14 +1340,17 @@ def shop_upgrades(player,all_upgrades):
                         if upgrade['niveau']<upgrade['niveaumax']:
                             upgrade['niveau']+=1
                         else:
-                            all_upgrades.remove(upgrade)
+                            game_upgrades.remove(upgrade)
                         return True
 
 
     return True
 
 def game_loop(selected_skin):
-    global enemies
+    global enemies,game_upgrades,all_upgrades
+
+    game_upgrades=all_upgrades
+
     player_ship = Ship(selected_skin)
     enemies,cycle = spawn_wave(1)  # lance la vague 1
     wave_number = 1
@@ -1291,18 +1364,14 @@ def game_loop(selected_skin):
         enemy.health = int(enemy.health * cycle ** 1.5)
         enemy.damage = enemy.damage * cycle
 
-    if selected_skin["name"] == "Vaisseau Doré":
-        player_ship = VaisseauDore()
-    elif selected_skin["name"] == "Vaisseau Cristal":
+    if selected_skin["name"] == "Vaisseau Cristal":
         player_ship = VaisseauCristal()
-    elif selected_skin["name"] == "Vaisseau Pierre" :
-        player_ship= VaisseauPierre()
+    elif selected_skin["name"] == "Vaisseau Améthyste":
+        player_ship = VaisseauAmethyste()
     elif selected_skin["name"] == "Vaisseau Plasma":
         player_ship = VaisseauPlasma()
     elif selected_skin["name"] == "Vaisseau Emeraude":
         player_ship = VaisseauEmeraude()
-    elif selected_skin["name"] == "Vaisseau Améthyste":
-        player_ship = VaisseauAmethyste()
     elif selected_skin["name"] == "Vaisseau Diamant":
         player_ship = VaisseauDiamant()
     else:
@@ -1414,7 +1483,7 @@ def game_loop(selected_skin):
         # nouvelle vague
         if len(enemies) == 0:
             wave_number += 1
-            if not shop_upgrades(player_ship,all_upgrades):
+            if not shop_upgrades(player_ship,game_upgrades):
                 running = False
                 break
             enemies,cycle = spawn_wave(wave_number)
@@ -1489,14 +1558,12 @@ def show_game_over(score, credits_earned):
     game_over_text = font.render("Game Over", True, RED)
     score_text = font.render(f"Score: {score}", True, WHITE)
     credits_text = font.render(f"Crédits gagnés: {credits_earned}", True, YELLOW)
-    restart_text = font.render("Press SPACE to Restart", True, GREEN)
     menu_text = font.render("Press M for Main Menu", True, BLUE)
 
     window.fill((0, 0, 0))
     window.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - 100))
     window.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 2 - 50))
     window.blit(credits_text, (WIDTH // 2 - credits_text.get_width() // 2, HEIGHT // 2))
-    window.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 + 50))
     window.blit(menu_text, (WIDTH // 2 - menu_text.get_width() // 2, HEIGHT // 2 + 100))
     pygame.display.flip()
 
