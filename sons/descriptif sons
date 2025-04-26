@@ -24,6 +24,16 @@ Sons "Musique vague -X":
 le numuéro ne se réferre pas à une vague en particulier c'est juste un moyen de les différencier.
 la musique est lancée en début de vague
 
+Son "victoire" : 
+Joué si le joueur à gagné 
+
+Son " défaite" :
+Joué si le joueur a perdu
+
+Son " score pas terrible" :
+Joué si le joueur n'a pas un score très reluisant
+
+
 ########################################################################################################
 
 Musique menu principal - 1 .mp3 : Est lancé à l'ouverture du jeu avec les trois boutons quitter, shop, jouer
