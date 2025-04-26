@@ -20,6 +20,10 @@ Utilisées quand une ennemy ou le joueur tire
 Son "boutton.mp3" :
 Utilisé lorsque l'utilisateur séléctionne une option ou appuye sur un boutton
 
+Sons "Musique vague -X":
+le numuéro ne se réferre pas à une vague en particulier c'est juste un moyen de les différencier.
+la musique est lancée en début de vague
+
 ########################################################################################################
 
 Musique menu principal - 1 .mp3 : Est lancé à l'ouverture du jeu avec les trois boutons quitter, shop, jouer
