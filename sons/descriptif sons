@@ -16,3 +16,15 @@ Ce sont des sons lorsque des enemis ou le personnage joueur se déplace (vite ou
 
 Sons "Tir ou laser" :
 Utilisées quand une ennemy ou le joueur tire
+
+Son "boutton.mp3" :
+Utilisé lorsque l'utilisateur séléctionne une option ou appuye sur un boutton
+
+########################################################################################################
+
+Musique menu principal - 1 .mp3 : Est lancé à l'ouverture du jeu avec les trois boutons quitter, shop, jouer
+
+Menu - 5 .mp3 : Est lancé si le joueur ouvre l'onglet du shop
+
+menu - 3.mp3 : Est lancé pendant le shop intermédiaire de vagues quand le joueur se voit plusieures options s'offrir à lui
+
