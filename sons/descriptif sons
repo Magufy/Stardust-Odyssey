@@ -1,4 +1,6 @@
-Description des sons
+############################
+#   Description des sons   #
+############################
 
 Sons "Menu - X" : 
 Dans l'iddée ce sont des sons qui seraient utilisées dans les menus : 
@@ -34,7 +36,9 @@ Son " score pas terrible" :
 Joué si le joueur n'a pas un score très reluisant
 
 
-########################################################################################################
+#############################################
+# Répartition des sons dans l'espace du jeu #
+#############################################
 
 Musique menu principal - 1 .mp3 : Est lancé à l'ouverture du jeu avec les trois boutons quitter, shop, jouer
 
