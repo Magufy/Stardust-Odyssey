@@ -1,0 +1,18 @@
+Description des sons
+
+Sons "Menu - X" : 
+Dans l'iddée ce sont des sons qui seraient utilisées dans les menus : 
+-principaux
+-entre les vagues (shop upgrades)
+-la boutique
+Chaque ecran aurait sa propre musique. Je suis parti sur un style retro acrcade comme Space invader
+
+Sons "Musique boss...." :
+Ce sont des sons qui sont utilisés quand un boss apparait ou qu'il se met à tirer énergiquement :
+comme par exemple le son : "Musique boss qui tire dans tous les sens.mp3"
+
+Sons "passage X" :
+Ce sont des sons lorsque des enemis ou le personnage joueur se déplace (vite ou lentement par exemple)
+
+Sons "Tir ou laser" :
+Utilisées quand une ennemy ou le joueur tire
