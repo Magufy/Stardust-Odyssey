@@ -46,6 +46,8 @@ def jouer_son():
     playsound(son8)
   if wave_number > 3 and wave_number%2 != 0:
     playsound(son9)
+  if MOUSEBOUTTONDOWN == True :
+    playsound("Son button 1.1.mp3")
     
     
   
