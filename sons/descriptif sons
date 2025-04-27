@@ -16,20 +16,17 @@ Sons qu'il me (Zima) reste à trouver à ce jour :
 
 - sons de score level up
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# #########################################################################################
+# Utiliser le fichier script_jouer_sons.py pour avoir les sons                            #
+#                                                                                         #
+# playsound("son.mp3") aura pour ffet de jouer le son mais le jouera uniquement une fois  #
+# pour que le son soit joué en boucle par exemple dans le cas de la musique de fond il    #
+# faut définir le son :                                                                   #
+# son1 = "son.mp3"                                                                        #
+#                                                                                         #
+# puis utiliser playsound :                                                               #
+# playsound (son1)                                                                        #
+###########################################################################################
 
 
 
