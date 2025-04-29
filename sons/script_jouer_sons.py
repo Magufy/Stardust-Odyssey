@@ -1,3 +1,9 @@
+################################
+#CE SCRIPT N'EST PLUS UTILISE !#
+################################
+
+
+
 from playsound import playsound
 damage_to_player = 0
 
