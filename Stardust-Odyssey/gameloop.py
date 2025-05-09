@@ -1040,7 +1040,7 @@ class Shop:
         pygame.draw.rect(surface, skin_color, card_contour, 10)
 
         card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
-        pygame.draw.rect(surface, GRAY, card_rect, border_radius=10)
+        pygame.draw.rect(surface, GRAY, card_rect, border_radius=15)
 
         # --- Preview Area --- 
         preview_area_size = min(self.card_width * 0.8, self.card_height * 0.4) # Adjust size as needed
