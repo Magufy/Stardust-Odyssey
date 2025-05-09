@@ -36,13 +36,13 @@ pygame.display.set_caption("Nova Drift Prototype - Fullscreen Mode")
 
 def game_loop(selected_skin, p2p=None, remote_skin_info=None):
     global enemies
-    global game_upgrades # Ensure game_upgrades is accessible
+    global shop_upgrade # Ensure shop_upgrade is accessible
 
     # Initialisation du gestionnaire de dégâts
     damage_manager = DamageNumberManager()
 
     # Reset upgrade levels at the start of a new game
-    for upgrade in game_upgrades:
+    for upgrade in shop_upgrade:
         upgrade['niveau'] = 1 # Reset level to 1
 
     # Initialiser running
@@ -877,7 +877,7 @@ def create_enemy_from_data(enemy_data):
     return enemy
 
 # Variable globale pour stocker les améliorations disponibles
-game_upgrades = all_upgrades
+shop_upgrade = all_upgrades
 
 def draw_game_info(window, font, score, player, wave_number, wave_text_timer, player2=None):
     """Affiche les informations de jeu (score, santé, vague)"""
