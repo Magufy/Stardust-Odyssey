@@ -3,6 +3,21 @@ import random
 import time
 from queue import Empty
 
+pygame.init()
+# Paramètres de la fenêtre en plein écran
+window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+WIDTH, HEIGHT = window.get_size()
+pygame.display.set_caption("Nova Drift Prototype - Fullscreen Mode")
+
+# Couleurs
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
+GRAY = (128, 128, 128)
+BLACK = (0, 0, 0)
+
 # Store all_upgrades globally or pass it around if needed elsewhere
 # Updated list with levels, max levels, and IDs
 all_upgrades = [
