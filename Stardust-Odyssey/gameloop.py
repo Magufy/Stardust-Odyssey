@@ -17,7 +17,6 @@ from boutons import Button, InputBox
 from enemies import BasicEnemy, TankEnemy, ShooterEnemy, LinkEnemy, Tank_Boss, Dash_Boss, Laser_Boss, Mothership_Boss
 
 
-
 # Couleurs
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -402,7 +401,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                 'player': {
                     'x': local_ship.rect.centerx,
                     'y': local_ship.rect.centery,
-                    'angle': local_ship.angle,
+                    'angle': (local_ship.angle + 90) % 360,  # Ajout de 90 degrés pour corriger la rotation en multijoueur
                     'forcefield_damage': local_ship.forcefield_damage,
                     'last_forcefield_time': local_ship.last_forcefield_time,
                     # Health/Status only sent BY server about the player it controls (P1)
