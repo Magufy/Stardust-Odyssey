@@ -1007,14 +1007,14 @@ class Shop:
                     skin["unlocked"] = unlocked_skin["unlocked"]
 
         self.buttons = {
-            "play": Button(WIDTH // 2 - 83, HEIGHT*0.79 - 25, 162, 49, ""), 
-            "shop": Button(WIDTH // 2 - 72, HEIGHT*0.8525 - 25, 141, 40, ""),  
-            "quit": Button(WIDTH // 2 - 83, HEIGHT*0.905 - 25, 162, 49, ""),
+            "play": Button(WIDTH // 2 - 83, HEIGHT*0.795 - 25, 162, 49, ""), 
+            "shop": Button(WIDTH // 2 - 72, HEIGHT*0.857 - 25, 141, 40, ""),  
+            "quit": Button(WIDTH // 2 - 83, HEIGHT*0.91 - 25, 162, 49, ""),
             "back": Button(self.margin, self.margin, 100, 40, "RETOUR"),
-            "singleplayer": Button(WIDTH // 2 - 150, HEIGHT // 2 - 60, 300, 75, "singleplayer"),
-            "multiplayer": Button(WIDTH // 2 - 150, HEIGHT // 2 + 60, 300, 75, "multiplayer"),
-            "create_room": Button(WIDTH // 2 - 150, HEIGHT // 2 - 60,300, 75, "Créer une Room"),
-            "join_room": Button(WIDTH // 2 - 150, HEIGHT // 2 + 60, 300, 75, "Rejoindre une Room"),
+            "singleplayer": Button(WIDTH*0.425 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
+            "multiplayer": Button(WIDTH*0.575 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
+            "create_room": Button(WIDTH*0.5625 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
+            "join_room": Button(WIDTH*0.4375 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
             "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Entrer"),
             "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Jouer"),
         }
@@ -1418,8 +1418,6 @@ class Shop:
                 # Réguler la vitesse de la vidéo
                 clock.tick(30)  # 30 FPS, ajuste selon ta vidéo
 
-                title = self.font.render("GAME MODE", True, WHITE)
-                screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 100))
                 self.buttons["singleplayer"].draw(screen)
                 self.buttons["multiplayer"].draw(screen)
                 self.buttons["back"].draw(screen)
@@ -1461,8 +1459,6 @@ class Shop:
 
 
                 # Draw multiplayer menu titles, buttons
-                title = self.font.render("multiplayer", True, WHITE)
-                screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 4))
 
                 # Draw buttons
                 if "create_room" in self.buttons: self.buttons["create_room"].draw(screen)
