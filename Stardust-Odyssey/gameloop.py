@@ -1037,7 +1037,7 @@ class Shop:
         card_contour = pygame.Rect(x, y, self.card_width, self.card_height)
         # Utiliser couleur_vaisseau si disponible, sinon utiliser une couleur par défaut
         skin_color = skin.get("couleur_vaisseau", BLUE)  # BLUE comme couleur par défaut
-        pygame.draw.rect(surface, skin_color, card_contour, 10)
+        pygame.draw.rect(surface, skin_color, card_contour,15)
 
         card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
         pygame.draw.rect(surface, GRAY, card_rect, border_radius=15)
@@ -1045,7 +1045,7 @@ class Shop:
         # --- Preview Area --- 
         preview_area_size = min(self.card_width * 0.8, self.card_height * 0.4) # Adjust size as needed
         preview_rect_bg = pygame.Rect(x + (self.card_width - preview_area_size) // 2, y + 20, preview_area_size, preview_area_size)
-        pygame.draw.rect(surface, (40, 40, 40), preview_rect_bg, border_radius=5) # Background for preview
+        pygame.draw.rect(surface, skin_color, preview_rect_bg, border_radius=5) # Background for preview
 
         # --- Get Ship Image --- 
 
