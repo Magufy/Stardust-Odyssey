@@ -970,11 +970,10 @@ class Shop:
         self.server_ip = ""  # To store the server IP for display
         self.font = pygame.font.Font(None, 36)
 
-        # Charger la vidéo avec OpenCV
-        self.video_path = "images/video-menu.mp4"  # Remplace par le chemin de ta vidéo
-        self.cap = cv2.VideoCapture(self.video_path)
-
-
+        # Initialiser les variables pour la gestion des vidéos
+        self.current_video = None
+        self.video_path = "images/video-menu.mp4"  # Chemin par défaut
+        self.cap = None  # Sera initialisé lors du premier affichage
 
         # Play menu music when initializing the shop
         pygame.mixer.stop()  # Stop any currently playing music
@@ -1344,38 +1343,43 @@ class Shop:
             screen.fill(BLACK)
 
             if self.current_screen == "menu":
-
-                # Charger la vidéo avec OpenCV
-                self.video_path = "images/video-menu.mp4"  # Remplace par le chemin de ta vidéo
-                self.cap = cv2.VideoCapture(self.video_path)
-
-                # Vérifier si la vidéo est chargée correctement
-                if not self.cap.isOpened():
-                    print("Erreur lors de l'ouverture de la vidéo.")
-                    exit()
-
+                # Vérifier si la vidéo est déjà ouverte et si c'est la bonne
+                if not hasattr(self, 'current_video') or self.current_video != "menu":
+                    # Fermer la vidéo précédente si elle existe
+                    if hasattr(self, 'cap') and self.cap is not None:
+                        self.cap.release()
+                    # Charger la nouvelle vidéo
+                    self.video_path = "images/video-menu.mp4"
+                    self.cap = cv2.VideoCapture(self.video_path)
+                    self.current_video = "menu"
+                    
+                    # Vérifier si la vidéo est chargée correctement
+                    if not self.cap.isOpened():
+                        print("Erreur lors de l'ouverture de la vidéo menu.")
+                        exit()
+                
                 # Lire les images de la vidéo et les afficher
-                clock = pygame.time.Clock()
-                self.ret, frame = self.cap.read()
-                if not self.ret:
+                ret, frame = self.cap.read()
+                if not ret:
                     # Si la vidéo est terminée, revenir au début
-                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Revenir au premier frame
-
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = self.cap.read()  # Lire la première image après réinitialisation
+                    if not ret:  # Si toujours pas de frame, il y a un problème avec la vidéo
+                        print("Impossible de lire la vidéo menu.")
+                        frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)  # Créer une image noire
+                
                 # Convertir l'image OpenCV (BGR) en format Pygame (RGB)
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
                 frame = np.transpose(frame, (1, 0, 2))  # Ajuster la forme (hauteur, largeur, canaux)
                 
                 # Redimensionner l'image pour qu'elle s'adapte à l'écran
-                frame = cv2.resize(frame, (HEIGHT,WIDTH))
+                frame = cv2.resize(frame, (HEIGHT, WIDTH))
                 
                 # Convertir l'image en surface Pygame
                 frame_surface = pygame.surfarray.make_surface(frame)
                 
-                # Afficher l'image sur la fenêtre Pygame, centrée
+                # Afficher l'image sur la fenêtre Pygame
                 screen.blit(frame_surface, (0, 0))
-                # Réguler la vitesse de la vidéo
-                clock.tick(30)  # 30 FPS, ajuste selon ta vidéo
                 
                 stylish_font = pygame.font.Font("Stardust_Odyssey_police.ttf", 100)
                 title = stylish_font.render("STARDUST ODYSSEY", True, (255, 255, 255))
@@ -1385,78 +1389,86 @@ class Shop:
                 self.buttons["quit"].draw(screen)
 
             elif self.current_screen == "play_menu":
-
-                # Charger la vidéo avec OpenCV
-                self.video_path = "images/video-menu2.mp4"  # Remplace par le chemin de ta vidéo
-                self.cap = cv2.VideoCapture(self.video_path)
-
-                # Vérifier si la vidéo est chargée correctement
-                if not self.cap.isOpened():
-                    print("Erreur lors de l'ouverture de la vidéo.")
-                    exit()
-
+                # Vérifier si la vidéo est déjà ouverte et si c'est la bonne
+                if not hasattr(self, 'current_video') or self.current_video != "play_menu":
+                    # Fermer la vidéo précédente si elle existe
+                    if hasattr(self, 'cap') and self.cap is not None:
+                        self.cap.release()
+                    # Charger la nouvelle vidéo
+                    self.video_path = "images/video-menu2.mp4"
+                    self.cap = cv2.VideoCapture(self.video_path)
+                    self.current_video = "play_menu"
+                    
+                    # Vérifier si la vidéo est chargée correctement
+                    if not self.cap.isOpened():
+                        print("Erreur lors de l'ouverture de la vidéo play_menu.")
+                        exit()
+                
                 # Lire les images de la vidéo et les afficher
-                clock = pygame.time.Clock()
-                self.ret, frame = self.cap.read()
-                if not self.ret:
+                ret, frame = self.cap.read()
+                if not ret:
                     # Si la vidéo est terminée, revenir au début
-                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Revenir au premier frame
-
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = self.cap.read()  # Lire la première image après réinitialisation
+                    if not ret:  # Si toujours pas de frame, il y a un problème avec la vidéo
+                        print("Impossible de lire la vidéo play_menu.")
+                        frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)  # Créer une image noire
+                
                 # Convertir l'image OpenCV (BGR) en format Pygame (RGB)
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
                 frame = np.transpose(frame, (1, 0, 2))  # Ajuster la forme (hauteur, largeur, canaux)
                 
                 # Redimensionner l'image pour qu'elle s'adapte à l'écran
-                frame = cv2.resize(frame, (HEIGHT,WIDTH))
+                frame = cv2.resize(frame, (HEIGHT, WIDTH))
                 
                 # Convertir l'image en surface Pygame
                 frame_surface = pygame.surfarray.make_surface(frame)
                 
-                # Afficher l'image sur la fenêtre Pygame, centrée
+                # Afficher l'image sur la fenêtre Pygame
                 screen.blit(frame_surface, (0, 0))
-                # Réguler la vitesse de la vidéo
-                clock.tick(30)  # 30 FPS, ajuste selon ta vidéo
 
                 self.buttons["singleplayer"].draw(screen)
                 self.buttons["multiplayer"].draw(screen)
                 self.buttons["back"].draw(screen)
 
             elif self.current_screen == "multiplayer_menu":
-
+                # Vérifier si la vidéo est déjà ouverte et si c'est la bonne
+                if not hasattr(self, 'current_video') or self.current_video != "multiplayer_menu":
+                    # Fermer la vidéo précédente si elle existe
+                    if hasattr(self, 'cap') and self.cap is not None:
+                        self.cap.release()
+                    # Charger la nouvelle vidéo
+                    self.video_path = "images/video-menu3.mp4"
+                    self.cap = cv2.VideoCapture(self.video_path)
+                    self.current_video = "multiplayer_menu"
+                    
+                    # Vérifier si la vidéo est chargée correctement
+                    if not self.cap.isOpened():
+                        print("Erreur lors de l'ouverture de la vidéo multiplayer_menu.")
+                        exit()
                 
-                # Charger la vidéo avec OpenCV
-                self.video_path = "images/video-menu3.mp4"  # Remplace par le chemin de ta vidéo
-                self.cap = cv2.VideoCapture(self.video_path)
-
-                # Vérifier si la vidéo est chargée correctement
-                if not self.cap.isOpened():
-                    print("Erreur lors de l'ouverture de la vidéo.")
-                    exit()
-
                 # Lire les images de la vidéo et les afficher
-                clock = pygame.time.Clock()
-                self.ret, frame = self.cap.read()
-                if not self.ret:
+                ret, frame = self.cap.read()
+                if not ret:
                     # Si la vidéo est terminée, revenir au début
-                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Revenir au premier frame
-
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = self.cap.read()  # Lire la première image après réinitialisation
+                    if not ret:  # Si toujours pas de frame, il y a un problème avec la vidéo
+                        print("Impossible de lire la vidéo multiplayer_menu.")
+                        frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)  # Créer une image noire
+                
                 # Convertir l'image OpenCV (BGR) en format Pygame (RGB)
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
                 frame = np.transpose(frame, (1, 0, 2))  # Ajuster la forme (hauteur, largeur, canaux)
                 
                 # Redimensionner l'image pour qu'elle s'adapte à l'écran
-                frame = cv2.resize(frame, (HEIGHT,WIDTH))
+                frame = cv2.resize(frame, (HEIGHT, WIDTH))
                 
                 # Convertir l'image en surface Pygame
                 frame_surface = pygame.surfarray.make_surface(frame)
                 
-                # Afficher l'image sur la fenêtre Pygame, centrée
+                # Afficher l'image sur la fenêtre Pygame
                 screen.blit(frame_surface, (0, 0))
-                # Réguler la vitesse de la vidéo
-                clock.tick(30)  # 30 FPS, ajuste selon ta vidéo
-
 
                 # Draw multiplayer menu titles, buttons
 
