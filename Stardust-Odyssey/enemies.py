@@ -80,6 +80,8 @@ class Enemy:
 
             # Draw boss name if available
             if hasattr(self, 'bossname'):
+                font = pygame.font.Font(None,36)
+                self.font = pygame.font.Font(None, 36)
                 bosstag = font.render(self.bossname, True, WHITE)
                 # Center the boss name text above the health bar
                 tag_rect = bosstag.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
