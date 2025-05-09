@@ -3,6 +3,7 @@ import os
 
 from player import Ship
 
+BLUE = (0,0,255)
 
 def save_data(credits, selected_skin, skins):
     with open("save_data.json", "w") as file:
