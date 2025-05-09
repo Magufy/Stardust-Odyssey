@@ -1034,6 +1034,9 @@ class Shop:
         self.entering_ip = False
 
     def draw_skin_preview(self, surface, skin, x, y):
+        card_contour = pygame.Rect(x, y, self.card_width, self.card_height)
+        pygame.draw.rect(surface, skin["couleur_vaisseau"], card_contour, 10)
+
         card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
         pygame.draw.rect(surface, GRAY, card_rect, border_radius=10)
 
