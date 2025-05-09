@@ -991,12 +991,12 @@ class Shop:
         self.card_height = (usable_height - (self.grid_size[1] + 1) * self.padding) // self.grid_size[1]
 
         self.skins = [
-            {"name": "Vaisseau Basique", "price": "gratuit", "unlocked": True, "preview_color": BLUE},
-            {"name": "Vaisseau Cristal", "price": 2000, "unlocked": False, "preview_color": (150, 200, 255)},
-            {"name": "Vaisseau Améthyste", "price": 120, "unlocked": False, "preview_color": (200,0,200)},
-            {"name": "Vaisseau Plasma", "price": 50, "unlocked": False, "preview_color": (255, 100, 255)},
-            {"name": "Vaisseau Emeraude", "price": 100,"unlocked":False,"preview_color": (0,255,50)},
-            {"name": "Vaisseau Diamant", "price": "PUB", "unlocked": False, "preview_color": (0,255,255)}
+            {"name": "Vaisseau Basique", "price": "gratuit", "unlocked": True, "couleur_vaisseau": BLUE},
+            {"name": "Vaisseau Cristal", "price": 2000, "unlocked": False, "couleur_vaisseau": (150, 200, 255)},
+            {"name": "Vaisseau Améthyste", "price": 120, "unlocked": False, "couleur_vaisseau": (200,0,200)},
+            {"name": "Vaisseau Plasma", "price": 50, "unlocked": False, "couleur_vaisseau": (255, 100, 255)},
+            {"name": "Vaisseau Emeraude", "price": 100,"unlocked":False,"couleur_vaisseau": (0,255,50)},
+            {"name": "Vaisseau Diamant", "price": "PUB", "unlocked": False, "couleur_vaisseau": (0,255,255)}
         ]
 
         # Appliquer les skins débloqués chargés depuis le json
@@ -1035,7 +1035,9 @@ class Shop:
 
     def draw_skin_preview(self, surface, skin, x, y):
         card_contour = pygame.Rect(x, y, self.card_width, self.card_height)
-        pygame.draw.rect(surface, skin["couleur_vaisseau"], card_contour, 10)
+        # Utiliser couleur_vaisseau si disponible, sinon utiliser une couleur par défaut
+        skin_color = skin.get("couleur_vaisseau", BLUE)  # BLUE comme couleur par défaut
+        pygame.draw.rect(surface, skin_color, card_contour, 10)
 
         card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
         pygame.draw.rect(surface, GRAY, card_rect, border_radius=10)
