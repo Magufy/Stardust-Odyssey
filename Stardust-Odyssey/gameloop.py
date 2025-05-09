@@ -14,6 +14,7 @@ from spawnwave import spawn_wave
 from multijoueur import P2PCommunication
 from data import load_data, save_data
 from boutons import Button, InputBox
+from enemies import BasicEnemy, TankEnemy, ShooterEnemy, LinkEnemy, Tank_Boss, Dash_Boss, Laser_Boss, Mothership_Boss
 
 
 
