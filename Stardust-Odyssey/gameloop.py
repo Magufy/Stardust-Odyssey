@@ -7,7 +7,7 @@ import socket
 import cv2
 import numpy as np
 
-from player import Ship, creer_vaisseau
+from player import Ship, creer_vaisseau, Bullet
 from damage_numbers import DamageNumberManager
 from upgrades import shop_upgrades, all_upgrades
 from spawnwave import spawn_wave
