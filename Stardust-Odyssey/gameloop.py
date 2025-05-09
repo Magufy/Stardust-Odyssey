@@ -1012,8 +1012,8 @@ class Shop:
             "back": Button(self.margin, self.margin, 100, 40, "RETOUR"),
             "singleplayer": Button(WIDTH*0.425 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
             "multiplayer": Button(WIDTH*0.575 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
-            "create_room": Button(WIDTH*0.5625 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
-            "join_room": Button(WIDTH*0.4375 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
+            "create_room": Button(WIDTH*0.4375 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
+            "join_room": Button(WIDTH*0.5625 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
             "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Entrer"),
             "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Jouer"),
         }
