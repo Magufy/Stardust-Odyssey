@@ -9,7 +9,7 @@ import numpy as np
 
 from player import Ship, creer_vaisseau
 from damage_numbers import DamageNumberManager
-from upgrades import game_upgrades, all_upgrades
+from upgrades import shop_upgrades, all_upgrades
 from spawnwave import spawn_wave
 from multijoueur import P2PCommunication
 from data import load_data, save_data
