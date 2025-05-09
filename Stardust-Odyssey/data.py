@@ -23,12 +23,14 @@ def load_data():
                 "selected_skin": {
                     "name": "Vaisseau Basique",
                     "price": "gratuit",
-                    "unlocked": True
+                    "unlocked": True,
+                    "couleur_vaisseau": BLUE
                 },
                 "skins": [{
                     "name": "Vaisseau Basique",
                     "price": "gratuit",
-                    "unlocked": True
+                    "unlocked": True,
+                    "couleur_vaisseau": BLUE
                 }]
             }
             with open("save_data.json", "w") as file:
@@ -40,10 +42,21 @@ def load_data():
             try:
                 data = json.load(file)
 
+                # Vérifier si selected_skin est un dictionnaire
+                selected_skin = data.get("selected_skin", Ship())
+                if isinstance(selected_skin, dict) and "couleur_vaisseau" in selected_skin:
+                    selected_skin["couleur_vaisseau"] = tuple(selected_skin["couleur_vaisseau"])
+
+                # Convertir les couleur_vaisseau en tuples pour tous les skins
+                skins = data.get("skins", [])
+                for skin in skins:
+                    if isinstance(skin, dict) and "couleur_vaisseau" in skin:
+                        skin["couleur_vaisseau"] = tuple(skin["couleur_vaisseau"])
+
                 return (
                     data.get("credits", 5000),
-                    data.get("selected_skin", Ship()),
-                    data.get("skins", [])
+                    selected_skin,
+                    skins
                 )
             except json.JSONDecodeError:
                 # Si le fichier est corrompu, créer un nouveau avec les valeurs par défaut
@@ -52,12 +65,14 @@ def load_data():
                     "selected_skin": {
                         "name": "Vaisseau Basique",
                         "price": "gratuit",
-                        "unlocked": True
+                        "unlocked": True,
+                        "couleur_vaisseau": BLUE
                     },
                     "skins": [{
                         "name": "Vaisseau Basique",
                         "price": "gratuit",
-                        "unlocked": True
+                        "unlocked": True,
+                        "couleur_vaisseau": BLUE
                     }]
                 }
                 with open("save_data.json", "w") as file:
@@ -70,9 +85,11 @@ def load_data():
         return 5000, {
             "name": "Vaisseau Basique",
             "price": "gratuit",
-            "unlocked": True
+            "unlocked": True,
+            "couleur_vaisseau": BLUE
         }, [{
             "name": "Vaisseau Basique",
             "price": "gratuit",
-            "unlocked": True
+            "unlocked": True,
+            "couleur_vaisseau": BLUE
         }]
