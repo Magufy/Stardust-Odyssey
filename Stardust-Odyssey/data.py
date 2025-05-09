@@ -40,13 +40,10 @@ def load_data():
             try:
                 data = json.load(file)
 
-                # Vérifier si selected_skin est un dictionnaire
-                selected_skin = data.get("selected_skin", Ship())
-
                 return (
                     data.get("credits", 5000),
-                    selected_skin,
-                    skins
+                    data.get("selected_skin", Ship()),
+                    data.get("skins", [])
                 )
             except json.JSONDecodeError:
                 # Si le fichier est corrompu, créer un nouveau avec les valeurs par défaut
