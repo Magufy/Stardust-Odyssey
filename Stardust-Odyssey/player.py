@@ -121,15 +121,19 @@ class Ship:
         if self.rect.x <= 0 :
             self.rect.x = WIDTH-5
             self.health-=5
+            self.invincible_time=60
         if self.rect.x >= WIDTH :
             self.rect.x = 5
             self.health-=5
+            self.invincible_time=60
         if self.rect.y <= 0 :
             self.rect.y = HEIGHT-5
             self.health-=5
+            self.invincible_time=60
         if self.rect.y >= HEIGHT :
             self.rect.y = 5
             self.health-=5
+            self.invincible_time=60
 
     def rotate_to_mouse(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
