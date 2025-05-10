@@ -189,7 +189,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                         # Update remote ship's controllable state
                         remote_ship.rect.centerx = remote_player_data.get('x', remote_ship.rect.centerx)
                         remote_ship.rect.centery = remote_player_data.get('y', remote_ship.rect.centery)
-                        remote_ship.angle = (remote_player_data.get('angle', remote_ship.angle) - 90) % 360  # Correction de la rotation pour le multijoueur
+                        remote_ship.angle = (remote_player_data.get('angle', remote_ship.angle)) % 360  # Correction de la rotation pour le multijoueur
                         remote_ship.forcefield_damage = remote_player_data.get('forcefield_damage', remote_ship.forcefield_damage)
                         remote_ship.last_forcefield_time = remote_player_data.get('last_forcefield_time', remote_ship.last_forcefield_time)
 
