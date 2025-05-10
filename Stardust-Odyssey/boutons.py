@@ -13,6 +13,7 @@ class Button:
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.is_hovered = False
+        self.was_clicked = False
 
         self.selected_color = (255, 255, 255)
         self.unselected_color = (150, 150, 150)
@@ -32,10 +33,14 @@ class Button:
     def handle_event(self, event):
         if event.type == pygame.MOUSEMOTION:
             self.is_hovered = self.rect.collidepoint(event.pos)
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if self.is_hovered:
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.rect.collidepoint(event.pos):
+                self.was_clicked = True
                 return True
         return False
+    
+    def reset(self):
+        self.was_clicked = False
 
 class InputBox:
     def __init__(self, x, y, width, height, text=''):
