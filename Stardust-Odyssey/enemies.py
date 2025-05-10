@@ -656,7 +656,7 @@ class Tank_Boss(Enemy):
         self.speed = 3
         self.health = 600
         self.maxhealth=600
-        self.damage = 40
+        self.damage = 20
         self.color = RED
         self.type= [Tank_Boss]
         self.bossname= "BEHEMOTH"
@@ -781,7 +781,7 @@ class Dash_Boss(Enemy):
         self.speed = 4
         self.health = 800
         self.maxhealth=800
-        self.damage = 50
+        self.damage = 10
         self.color = YELLOW
         self.type= [Dash_Boss]
         self.bossname= "BERSERKER"
@@ -1071,7 +1071,7 @@ class Mothership_Boss(Enemy):
         self.speed = 3
         self.health = 3000 #test
         self.maxhealth=3000
-        self.damage = 40
+        self.damage = 30
         self.color = (0,255,0)
         self.type= [Mothership_Boss]
         self.bossname= "MOTHERSHEEP"
