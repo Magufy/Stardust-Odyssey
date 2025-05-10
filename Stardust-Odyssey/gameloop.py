@@ -1327,9 +1327,11 @@ class Shop:
 
                 # Gestion du shop
                 elif self.current_screen == "shop":
-                    if self.buttons["back"].handle_event(event):
-                        self.current_screen = "menu"
-                        self.buttons["back"].reset()
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if self.buttons["back"].rect.collidepoint(event.pos):
+                            self.current_screen = "menu"
+                            self.buttons["back"].reset()
+                            break  # Sortir tout de suite de la boucle des événements
 
                         # Gestion des clics sur les skins
                         mouse_pos = event.pos
