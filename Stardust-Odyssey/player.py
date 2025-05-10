@@ -10,7 +10,7 @@ WIDTH, HEIGHT = window.get_size()
 pygame.display.set_caption("Nova Drift Prototype - Fullscreen Mode")
 
 class Ship:
-    def __init__(self, image_path="images/vaisseau_joueur.png", ship_size=(90, 90), damage_manager=None):
+    def __init__(self, image_path="images/vaisseau_joueur.png", ship_size=(90, 90), damage_manager=None,ship_speed=5,ship_health=100,ship_damage=10,ship_reload_speed=1.0,ship_bullet_size=5,ship_bullet_speed=5,ship_range=300,ship_wall_bounces=0,ship_explosion_radius=0,ship_bullet_piercing=0):
         self.image = None
         self.original_image = None
 
@@ -28,29 +28,29 @@ class Ship:
         self. velocite_gauche=0
 
         # Stats base :
-        self.speed = 5
-        self.health = 100
-        self.max_health = 100
-        self.damage = 10
-        self.range = 300
+        self.speed = ship_speed
+        self.health = ship_health
+        self.max_health = ship_health
+        self.range = ship_range
+        self.bullet_speed = ship_bullet_speed
+        self.reload_speed = ship_reload_speed
+        self.bullet_size = ship_bullet_size 
+        self.damage = ship_damage       
 
-        self.bullet_speed = 5
-        self.reload_speed = 1.0
+        self.explosion_radius = ship_explosion_radius
+        self.wall_bounces = ship_wall_bounces
+        self.bullet_piercing = ship_bullet_piercing
+        self.body_damage = 5
+
         self.regen_rate = 0
         self.enemy_bounces = 0
-        self.wall_bounces = 0
-        self.bullet_piercing = 0
         self.parallel_shots = 1
         self.shield = 0
-        self.bullet_size = 5
-        self.explosion_radius = 0
-        self.body_damage = 5
         self.last_shot_time = 0
         self.invincible_time = 0
         
         # Initialize le damage manager
         self.damage_manager = damage_manager
-
         self.forcefield_damage = 0
         self.last_forcefield_time = pygame.time.get_ticks()
         
@@ -78,7 +78,6 @@ class Ship:
         self.crit_multiplier = 1.5
 
         self.upgrades = []
-        self.damage_manager = None
         self.stun_timer=0
 
     def move(self):
@@ -274,59 +273,8 @@ class Ship:
         else:
             window.blit(self.image, self.rect)
 
-class VaisseauCristal(Ship):
-    def __init__(self):
-        super().__init__(image_path='images/vaisseau_joueur_cristal.png')
-        self.speed -= 0.2
-        self.health += 100
-        self.max_health += 100
-        self.damage += 5
-        self.reload_speed -+ 0.4
-        self.bullet_size += 2
-        self.bullet_speed -= 2
 
-
-class VaisseauAmethyste(Ship):
-    def __init__(self):
-        super().__init__(image_path='images/vaisseau_joueur_amethyste.png')
-        self.health-=20
-        self.max_health-=20
-        self.speed+=1.2
-        self.bullet_speed+=5
-        self.reload_speed+=0.6
-
-
-class VaisseauPlasma(Ship):
-    def __init__(self):
-        super().__init__(image_path='images/vaisseau_joueur_plasma.png')
-        self.speed -= 0.1
-        self.bullet_piercing += 3
-        self.damage += 10
-        self.bullet_speed +=10
-        self.reload_speed -= 0.8
-
-
-class VaisseauEmeraude(Ship) :
-    def __init__(self):
-        super().__init__(image_path='images/vaisseau_joueur_emeraude.png')
-        self.health-=20
-        self.max_health-=20
-        self.wall_bounces+=3
-        self.range+=2700
-        self.speed-=0.4
-
-class VaisseauDiamant(Ship):
-    def __init__(self):
-        super().__init__(image_path='images/vaisseau_joueur_diamant.png')
-        self.health += 50
-        self.max_health += 50
-        self.speed += 1.2
-        self.damage += 80
-        self.explosion_radius += 300
-
-
-
-def creer_vaisseau(skin_info, damage_manager=None):
+def creer_vaisseau(skin_info, damage_manager):
     # Vérifier si skin_info est une chaîne ou un dictionnaire
     if isinstance(skin_info, str):
         skin_name = skin_info
@@ -336,23 +284,63 @@ def creer_vaisseau(skin_info, damage_manager=None):
         # Type inconnu, utiliser le vaisseau par défaut
         return Ship(damage_manager=damage_manager)
 
+    # Par défaut, utiliser les valeurs standard du vaisseau basique
+    ship_params = {
+        'image_path': 'images/vaisseau_joueur.png',
+        'ship_health': 100,
+        'ship_wall_bounces': 0,
+        'ship_range': 300,
+        'ship_speed': 5
+    }
 
+    # Modifier les paramètres selon le type de vaisseau
     if skin_name == "Vaisseau Cristal":
-        ship = VaisseauCristal()
-    elif skin_name == "Vaisseau Améthyste" :
-        ship = VaisseauAmethyste()
+        ship_params.update({
+            'image_path': 'images/vaisseau_joueur_cristal.png',
+            'ship_health': 200,
+            'ship_damage': 15,
+            'ship_reload_speed': 0.7,
+            'ship_speed': 4.5,
+            'ship_bullet_size': 7,
+            'ship_bullet_speed': 7
+        })
+    elif skin_name == "Vaisseau Améthyste":
+        ship_params.update({
+            'image_path': 'images/vaisseau_joueur_amethyste.png',
+            'ship_health': 80,
+            'ship_reload_speed': 1.75,
+            'ship_speed': 6.5,
+            'ship_bullet_speed': 10
+        })
     elif skin_name == "Vaisseau Plasma":
-        ship = VaisseauPlasma()
+        ship_params.update({
+            'image_path': 'images/vaisseau_joueur_plasma.png',
+            'ship_bullet_piercing': 3,
+            'ship_range': 150,
+            'ship_speed': 4.5,
+            'ship_damage':20,
+            'ship_reload_speed': 0.5,
+            'ship_bullet_speed':10
+        })
     elif skin_name == "Vaisseau Emeraude":
-        ship = VaisseauEmeraude()
+        ship_params.update({
+            'image_path': 'images/vaisseau_joueur_emeraude.png',
+            'ship_health': 80,
+            'ship_wall_bounces': 3,
+            'ship_range': 2500,
+            'ship_speed': 4.6
+        })
     elif skin_name == "Vaisseau Diamant":
-        ship = VaisseauDiamant()
-    else:
-        # Par défaut, retourner le vaisseau basique
-        ship = Ship()
-    
-    # Set damage manager for all ships
-    ship.damage_manager = damage_manager
+        ship_params.update({
+            'image_path': 'images/vaisseau_joueur_diamant.png',
+            'ship_health': 200,
+            'ship_speed': 6.2,
+            'ship_damage': 30,
+            'ship_explosion_radius': 50
+        })
+
+    # Créer le vaisseau avec les paramètres appropriés
+    ship = Ship(damage_manager=damage_manager, **ship_params)
     return ship
 
 
