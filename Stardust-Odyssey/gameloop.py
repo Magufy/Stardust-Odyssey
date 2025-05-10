@@ -17,7 +17,6 @@ from boutons import Button, InputBox
 from enemies import BasicEnemy, TankEnemy, ShooterEnemy, LinkEnemy, Tank_Boss, Dash_Boss, Laser_Boss, Mothership_Boss
 
 
-
 # Couleurs
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -57,10 +56,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
     remote_ship = None  # Vaisseau distant (celui que contrôle l'autre joueur)
 
     # Création du vaisseau local
-    if isinstance(selected_skin, dict):
-        local_ship = creer_vaisseau(selected_skin, damage_manager=damage_manager)
-    else:
-        local_ship = Ship(selected_skin, damage_manager=damage_manager)
+    local_ship = creer_vaisseau(selected_skin, damage_manager=damage_manager)
 
     # Marquer le vaisseau local
     local_ship.is_local = True
@@ -193,7 +189,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                         # Update remote ship's controllable state
                         remote_ship.rect.centerx = remote_player_data.get('x', remote_ship.rect.centerx)
                         remote_ship.rect.centery = remote_player_data.get('y', remote_ship.rect.centery)
-                        remote_ship.angle = remote_player_data.get('angle', remote_ship.angle)
+                        remote_ship.angle = (remote_player_data.get('angle', remote_ship.angle) - 90) % 360  # Correction de la rotation pour le multijoueur
                         remote_ship.forcefield_damage = remote_player_data.get('forcefield_damage', remote_ship.forcefield_damage)
                         remote_ship.last_forcefield_time = remote_player_data.get('last_forcefield_time', remote_ship.last_forcefield_time)
 
@@ -286,7 +282,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                         # Update Client's OWN state (health, stun, etc.) based on server's player2 data
                         player2_data = msg.get('player2')
                         if player2_data and local_ship:
-                            local_ship.health = player2_data.get('health', local_ship.health)
+                            local_ship.angle = (player2_data.get('angle', local_ship.angle) - 90) % 360  # Correction de la rotation pour le multijoueur
                             local_ship.invincible_time = player2_data.get('invincible_time', local_ship.invincible_time)
                             local_ship.regen_rate = player2_data.get('regen_rate', local_ship.regen_rate)
                             local_ship.max_health = player2_data.get('max_health', local_ship.max_health)
@@ -402,7 +398,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                 'player': {
                     'x': local_ship.rect.centerx,
                     'y': local_ship.rect.centery,
-                    'angle': (local_ship.angle + 90) % 360,
+                    'angle': (local_ship.angle + 90) % 360,  # Correction de la rotation pour le multijoueur
                     'forcefield_damage': local_ship.forcefield_damage,
                     'last_forcefield_time': local_ship.last_forcefield_time,
                     # Health/Status only sent BY server about the player it controls (P1)
@@ -1327,13 +1323,10 @@ class Shop:
 
                 # Gestion du shop
                 elif self.current_screen == "shop":
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        if self.buttons["back"].rect.collidepoint(event.pos):
-                            self.current_screen = "menu"
-                            self.buttons["back"].reset()
-                            break  # Sortir tout de suite de la boucle des événements
+                    if self.buttons["back"].handle_event(event):
+                        self.current_screen = "menu"
 
-                        # Gestion des clics sur les skins
+                    if event.type == pygame.MOUSEBUTTONDOWN:
                         mouse_pos = event.pos
                         for i, skin in enumerate(self.skins):
                             row = i // self.grid_size[0]
@@ -1343,7 +1336,6 @@ class Shop:
                             card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
                             if card_rect.collidepoint(mouse_pos):
                                 self.handle_skin_selection(skin)
-
 
                 # Gestion du champ de saisie pour l'adresse IP
                 if hasattr(self, 'entering_ip') and self.entering_ip and hasattr(self, 'input_box'):
