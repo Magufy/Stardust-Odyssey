@@ -17,6 +17,7 @@ from boutons import Button, InputBox
 from enemies import BasicEnemy, TankEnemy, ShooterEnemy, LinkEnemy, Tank_Boss, Dash_Boss, Laser_Boss, Mothership_Boss
 
 
+
 # Couleurs
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -401,7 +402,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                 'player': {
                     'x': local_ship.rect.centerx,
                     'y': local_ship.rect.centery,
-                    'angle': (local_ship.angle + 90) % 360,  # Ajout de 90 degrés pour corriger la rotation en multijoueur
+                    'angle': (local_ship.angle + 90) % 360,
                     'forcefield_damage': local_ship.forcefield_damage,
                     'last_forcefield_time': local_ship.last_forcefield_time,
                     # Health/Status only sent BY server about the player it controls (P1)
@@ -1328,8 +1329,9 @@ class Shop:
                 elif self.current_screen == "shop":
                     if self.buttons["back"].handle_event(event):
                         self.current_screen = "menu"
+                        self.buttons["back"].reset()
 
-                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        # Gestion des clics sur les skins
                         mouse_pos = event.pos
                         for i, skin in enumerate(self.skins):
                             row = i // self.grid_size[0]
@@ -1339,6 +1341,7 @@ class Shop:
                             card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
                             if card_rect.collidepoint(mouse_pos):
                                 self.handle_skin_selection(skin)
+
 
                 # Gestion du champ de saisie pour l'adresse IP
                 if hasattr(self, 'entering_ip') and self.entering_ip and hasattr(self, 'input_box'):
