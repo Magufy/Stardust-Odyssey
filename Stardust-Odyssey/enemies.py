@@ -919,6 +919,7 @@ class Dash_Boss(Enemy):
             pygame.draw.rect(window, RED, (bar_x, bar_y, current_bar_width, bar_height))
             pygame.draw.rect(window, WHITE, (bar_x, bar_y, bar_width, bar_height), 2)
             if hasattr(self, 'bossname'):
+                font=pygame.font.Font(None,30)
                 bosstag = font.render(self.bossname, True, WHITE)
                 tag_rect = bosstag.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
                 window.blit(bosstag, tag_rect)
