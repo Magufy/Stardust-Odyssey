@@ -1047,7 +1047,7 @@ class Shop:
         # --- Get Ship Image --- 
 
         # Use creer_vaisseau to get the appropriate ship instance
-        temp_ship = creer_vaisseau(skin) 
+        temp_ship = creer_vaisseau(skin,damage_manager=DamageNumberManager()) 
         ship_image = temp_ship.original_image # Use the original image before rotation
             
         img_rect = ship_image.get_rect()
