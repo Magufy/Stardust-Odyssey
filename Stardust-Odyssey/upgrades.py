@@ -73,7 +73,7 @@ all_upgrades = [
      "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
 
     {"name": "Decoy", "id": "decoy_up", "effect": "Double Attack Speed, Half Damage","niveau":0,"niveaumax":3, "image":"images/upgrades/18_decoy.png",
-     "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed + 0.4), setattr(p, "damage", p.damage - 5)]},
+     "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed + 0.4), setattr(p, "damage", max(1,p.damage-5))]},
 
     {"name": "Berserker", "id": "berserker_up", "effect": "Damage scales with missing health","niveau":0,"niveaumax":1,"image":"images/upgrades/19_berserker.png", # Non-stackable
      "apply": lambda p: setattr(p, "berserker_bonus", True)}, # Use original flag logic
