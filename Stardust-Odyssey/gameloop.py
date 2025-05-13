@@ -530,7 +530,10 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                     if p2p:
                         enemy.p2p_comm = p2p # Make sure all enemies have access if needed
 
-                enemy.update(target_player)
+                if enemy.type == [Mothership_Boss]:
+                    enemy.update(target_player,enemies)
+                else:
+                    enemy.update(target_player)
 
                 # Vérifier la collision avec les joueurs
                 collision_p1 = enemy.check_collision(local_ship)
@@ -584,14 +587,6 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
         if remote_ship:
             for bullet in remote_ship.bullets:
                 bullet.draw(window)
-
-        # Dessiner les ennemis
-        if wave_in_progress or (p2p and is_server):
-            for enemy in enemies:
-                enemy.draw(window)
-        elif not p2p:
-            for enemy in enemies:
-                enemy.draw(window)
         
         # Mettre à jour et dessiner les nombres de dégâts
         damage_manager.update()
