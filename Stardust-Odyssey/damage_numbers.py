@@ -1,4 +1,5 @@
 import pygame
+import random
 
 class DamageNumber:
     def __init__(self, x, y, damage, is_critical=False):
@@ -9,6 +10,7 @@ class DamageNumber:
         self.color = (255, 165, 0) if is_critical else (255, 255, 255)  # Orange pour critique, blanc sinon
         self.speed = 2  # Vitesse de déplacement vers le haut
         self.font = pygame.font.Font(None, 36)
+        self.pos_x = self.x + random.randint(-10,10)
         
     def update(self):
         self.y -= self.speed  # Monte
@@ -18,7 +20,7 @@ class DamageNumber:
     def draw(self, window):
         # Rendre le texte avec une taille plus grande pour les critiques
         text = self.font.render(str(int(self.damage)), True, self.color)
-        window.blit(text, (self.x - text.get_width() // 2, self.y))
+        window.blit(text, (self.pos_x - text.get_width() // 2, self.y))
 
 class DamageNumberManager:
     def __init__(self):
