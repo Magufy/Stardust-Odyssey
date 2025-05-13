@@ -983,8 +983,8 @@ class Laser_Boss(Enemy):
                             'x': self.x,
                             'y': self.y,
                             'angle': angle,
-                            'speed': 5,
-                            'radius': 20,
+                            'speed': 4,
+                            'radius': 15,
                             'damage':5})
                     self.shoot_cooldown = 3
 
@@ -996,9 +996,9 @@ class Laser_Boss(Enemy):
                             'x': self.x,
                             'y': self.y,
                             'angle': math.radians(angle),
-                            'speed': 4,
+                            'speed': 2,
                             'radius': 30,
-                            'damage':50}
+                            'damage':10}
                             )
                     self.shoot_cooldown = 240  #4sec
 
@@ -1007,20 +1007,24 @@ class Laser_Boss(Enemy):
             proj['x'] += proj['speed'] * math.cos(proj['angle'])
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
 
-            # Hors de l'ecran
-            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
-                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
-                self.projectiles.remove(proj)
-                continue
+            
 
-            if proj['x'] <= 0 :
-                proj['x'] = WIDTH-5
-            if proj['x'] >= WIDTH :
-                proj['x'] = 5             # Bounce off screen edges
-            if proj['y'] <= 0 :
-                proj['y'] = HEIGHT-5                 # Bounce off screen edges
-            if proj['y'] >= HEIGHT :
-                proj['y'] = 5
+            if random.random() < 0.9:
+                # Hors de l'ecran
+                if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
+                    proj['y'] < -50 or proj['y'] > HEIGHT + 50):
+                    self.projectiles.remove(proj)
+                    continue
+
+            else:
+                if proj['x'] <= 0 :
+                    proj['x'] = WIDTH-5
+                if proj['x'] >= WIDTH :
+                    proj['x'] = 5          
+                if proj['y'] <= 0 :
+                    proj['y'] = HEIGHT-5                 
+                if proj['y'] >= HEIGHT :
+                    proj['y'] = 5
 
             # collision au joueur en ignorant sa periode d'invincibilité
             dist = math.hypot(player.rect.centerx - proj['x'],
@@ -1047,11 +1051,10 @@ class Laser_Boss(Enemy):
                         self.p2p_comm.envoyer_donnees({
                             'type': 'damage_update',
                             'player2_health': self.second_player.health,
-                            'player2_invincible_time': 60 # Le laser boss ne stun pas, mais on envoie l'invincibilité
                         })
                     continue
 
-            proj['radius']-=0.02
+            proj['radius']-=0.022
             if proj['radius']<8:
                 self.projectiles.remove(proj)
 
@@ -1088,7 +1091,8 @@ class Mothership_Boss(Enemy):
 
         # Counters for spawning minions
         self.spawn_cooldown = 600  # 10 seconds initial cooldown
-        self.can_spawn_minions = True
+
+        self.projectiletp=False
 
         # Load image
         image_path = 'images/boss_final.png'
@@ -1103,7 +1107,7 @@ class Mothership_Boss(Enemy):
         self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Store original
         self.proj_image = self.original_proj_image # Keep reference
 
-    def update(self, player):
+    def update(self, player,enemies):
         # Calculate angle towards player first
         dx_player = player.rect.centerx - self.x
         dy_player = player.rect.centery - self.y
@@ -1119,7 +1123,7 @@ class Mothership_Boss(Enemy):
             self.y += (dy / distance) * self.speed
         else:
             # Possibly pick a new target position
-            if random.random() < 0.01:  # 1% chance per frame
+            if random.random() < 0.0015:  # 1% chance per frame
                 self.target_x = random.randint(200, WIDTH-200)
                 self.target_y = random.randint(200, HEIGHT-200)
 
@@ -1134,21 +1138,39 @@ class Mothership_Boss(Enemy):
                 health_percent = self.health / self.maxhealth * 100
 
                 # Different attack patterns based on health
-                if health_percent < 30:  # Below 30% health - desperate mode
+                if health_percent < 20:  # Below 20% health - desperate mode
                     # Rapid fire at player (use calculated angle)
+                    self.projectiletp=False
                     self.projectiles.append({
                         'x': self.x,
                         'y': self.y,
-                        'angle': math.radians(self.angle), # Use calculated angle
+                        'angle': math.radians(self.angle), # angle
                         'speed': 6,
                         'radius': 20,
                         'damage': 15
                     })
-                    self.shoot_cooldown = 30  # Fast cooldown
+                    self.projectiles.append({
+                        'x': self.x,
+                        'y': self.y,
+                        'angle': math.radians(self.angle+13), # angle + 13
+                        'speed': 6,
+                        'radius': 20,
+                        'damage': 15
+                    })
+                    self.projectiles.append({
+                        'x': self.x,
+                        'y': self.y,
+                        'angle': math.radians(self.angle-13), # angle - 13
+                        'speed': 6,
+                        'radius': 20,
+                        'damage': 15
+                    })
+                    self.shoot_cooldown = random.randint(40,60)  # Fast cooldown
 
-                elif health_percent < 60:  # Below 60% health - aggressive mode
+                elif health_percent < 50:  # Below 50% health - aggressive mode
                     # Spiral pattern
-                    for i in range(8):
+                    self.projectiletp=True
+                    for i in range(12):
                         # Spiral angle calculation needs careful review if it should target player
                         # This current logic is purely time-based spiral, not player-targeted
                         spiral_angle = math.radians(i * 45 + (pygame.time.get_ticks() % 360))
@@ -1160,10 +1182,23 @@ class Mothership_Boss(Enemy):
                             'radius': 20, # Increased radius
                             'damage': 10
                         })
-                    self.shoot_cooldown = 120  # Medium cooldown
+                    self.shoot_cooldown = random.randint(180,240)  # gros cooldown, sinon bcp trop fort
 
-                else:  # Above 60% health - normal mode
+                elif health_percent < 75 : #phase aleatoire
+                    self.projectiletp=not self.projectiletp #inverse a chaque tir
+                    self.projectiles.append({
+                            'x': self.x,
+                            'y': self.y,
+                            'angle': random.random() * 6.28, #2pi, donc 360 degres
+                            'speed': random.randint(4,10),
+                            'radius': random.randint(10,30), # random radius
+                            'damage': random.randint(5,15)
+                        })
+                    self.shoot_cooldown = random.randint(20,70)
+
+                else:  # Above 75% health - normal mode
                     # Target player with slower, bigger shots (use calculated angle)
+                    self.projectiletp=False
                     self.projectiles.append({
                         'x': self.x,
                         'y': self.y,
@@ -1172,31 +1207,12 @@ class Mothership_Boss(Enemy):
                         'radius': 25,
                         'damage': 20
                     })
-
-                    # Add two spread shots
-                    spread = 0.3  # ~15 degrees
-                    self.projectiles.append({
-                        'x': self.x,
-                        'y': self.y,
-                        'angle': math.radians(self.angle) + spread, # Add spread to calculated angle
-                        'speed': 4,
-                        'radius': 25,
-                        'damage': 20
-                    })
-                    self.projectiles.append({
-                        'x': self.x,
-                        'y': self.y,
-                        'angle': math.radians(self.angle) - spread, # Subtract spread from calculated angle
-                        'speed': 4,
-                        'radius': 25,
-                        'damage': 20
-                    })
-                    self.shoot_cooldown = 180  # Slow cooldown
+                    self.shoot_cooldown = random.randint(40,120)  # Slow cooldown
 
             # Spawn minions when cooldown reaches 0 and health is below 70%
             if self.spawn_cooldown == 0 and (self.health / self.maxhealth) < 0.7:
                 self.spawn_minions(enemies)
-                self.spawn_cooldown = 600  # Reset cooldown to 10 seconds
+                self.spawn_cooldown = 480  # Reset cooldown to 8 seconds
 
         # Update projectiles
         for proj in self.projectiles[:]:
@@ -1204,16 +1220,16 @@ class Mothership_Boss(Enemy):
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
 
             # Hors de l'ecran
-            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
-                proj['y'] < -50 or proj['y'] > HEIGHT + 50):
-                if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
-                continue
+            if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or proj['y'] < -50 or proj['y'] > HEIGHT + 50):
 
-            # Bounce off screen edges
-            if proj['x'] <= 0: proj['x'] = WIDTH-5
-            if proj['x'] >= WIDTH: proj['x'] = 5
-            if proj['y'] <= 0: proj['y'] = HEIGHT-5
-            if proj['y'] >= HEIGHT: proj['y'] = 5
+                if self.projectiletp:
+                    # Bounce off screen edges
+                    if proj['x'] <= 0: proj['x'] = WIDTH-5
+                    if proj['x'] >= WIDTH: proj['x'] = 5
+                    if proj['y'] <= 0: proj['y'] = HEIGHT-5
+                    if proj['y'] >= HEIGHT: proj['y'] = 5
+                else:
+                    if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
 
             # collision au joueur en ignorant sa periode d'invincibilité
             dist = math.hypot(player.rect.centerx - proj['x'],
@@ -1245,12 +1261,13 @@ class Mothership_Boss(Enemy):
                     continue
 
             # Fade out projectiles over time
-            proj['radius'] -= 0.015
+            proj['radius'] -= 0.005
             if proj['radius'] < 10:
                 if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
 
-    def spawn_minions(self, enemies_list):
+    def spawn_minions(self,enemies):
         # Add 1-3 random enemies around the boss
+
         num_enemies = random.randint(1, 3)
         for _ in range(num_enemies):
             # Choose a random enemy type
@@ -1264,11 +1281,7 @@ class Mothership_Boss(Enemy):
             enemy.x = self.x + math.cos(angle_rad) * distance
             enemy.y = self.y + math.sin(angle_rad) * distance
 
-            # Add to the enemies list
-            if 'enemies' in globals():
-                globals()['enemies'].append(enemy)
-            elif enemies_list is not None:
-                enemies_list.append(enemy)
+            enemies.append(enemy)
 
     def draw(self, window):
         # Rotate the original image for drawing
@@ -1286,6 +1299,7 @@ class Mothership_Boss(Enemy):
             pygame.draw.rect(window, RED, (bar_x, bar_y, current_bar_width, bar_height))
             pygame.draw.rect(window, WHITE, (bar_x, bar_y, bar_width, bar_height), 2)
             if hasattr(self, 'bossname'):
+                font=pygame.font.Font(None,30)
                 bosstag = font.render(self.bossname, True, WHITE)
                 tag_rect = bosstag.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
                 window.blit(bosstag, tag_rect)
