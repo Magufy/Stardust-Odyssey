@@ -251,8 +251,6 @@ class Ship:
                     # Si l'ennemi est à portée du champ de force (200 pixels), lui infliger des dégâts
                     if distance <= 200:
                         enemy.health -= self.forcefield_damage
-                        if enemy.health <= 0:
-                            enemies.remove(enemy) # Supprimer l'ennemi s'il est éliminé
         # Gestion du temps de stun
         if self.stun_timer>0:
             self.stun_timer-=1 # Décrémenter le timer de stun
@@ -473,8 +471,6 @@ class Bullet:
                     distance = math.hypot(self.x - enemy.x, self.y - enemy.y)
                     if distance <= self.explosion_radius:
                         enemy.health -= self.damage * 0.5  # Dégâts réduits pour l'explosion
-                        if enemy.health <= 0:
-                            enemies.remove(enemy) # Créer une surface transparente pour l'animation d'explosion
 
             explosion_surface = pygame.Surface((self.explosion_radius * 2, self.explosion_radius * 2), pygame.SRCALPHA)
 
