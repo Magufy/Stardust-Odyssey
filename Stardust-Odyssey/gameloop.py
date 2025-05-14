@@ -529,7 +529,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                     if p2p:
                         enemy.p2p_comm = p2p # Make sure all enemies have access if needed
 
-                if enemy.type == [Mothership_Boss]:
+                if enemy.type == [Mothership_Boss] or enemy.type == [LinkEnemy]:
                     enemy.update(target_player,enemies)
                 else:
                     enemy.update(target_player)
