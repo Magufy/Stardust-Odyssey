@@ -10,15 +10,18 @@ BLUE = (0, 0, 255)
 
 class Button:
     def __init__(self, x, y, width, height, text):
+         # Crée un rectangle = la zone cliquable du bouton
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
+        # Indique si la souris "survole" le bouton
         self.is_hovered = False
+        # Indique si la souris clique le boutton
         self.was_clicked = False
 
         self.selected_color = (255, 255, 255)
         self.unselected_color = (150, 150, 150)
         self.background_color = (10, 10, 30)
-
+        # définition de la police du texte sur le boutton
         self.font = pygame.font.Font(None, 36)
 
     def draw(self, surface):
@@ -31,19 +34,22 @@ class Button:
         surface.blit(text_surface, text_rect)
 
     def handle_event(self, event):
+        # Gère les événements liés à la souris et les boutons
         if event.type == pygame.MOUSEMOTION:
             self.is_hovered = self.rect.collidepoint(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.rect.collidepoint(event.pos):
                 self.was_clicked = True
-                return True
-        return False
+                return True # Indique si le boutton a été cliqué
+        return False # Aucun clique si en dehors du bouton
     
     def reset(self):
-        self.was_clicked = False
+        # Réinitialise l'état de clic du bouton
+        self.was_clicked = False 
 
 class InputBox:
     def __init__(self, x, y, width, height, text=''):
+        # Crée une zone rectangulaire pour l'entrée de texte
         self.rect = pygame.Rect(x, y, width, height)
         self.color = WHITE
         self.text = text
