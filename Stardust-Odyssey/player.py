@@ -437,7 +437,7 @@ class Bullet:
             current_radius = self.explosion_radius * (self.explosion_time / 60)
             # Définir la couleur de l'explosion en fonction de l'origine du tir (local ou non)
             if self.fired_by_local:
-                color = (255, 100, 50, min(200, 255 * (self.explosion_time / 30 # Explosion rouge/orange
+                color = (255, 100, 50, min(200, 255 * (self.explosion_time / 30))) # Explosion rouge/orange
             else: 
                 color = (150, 50, 255, min(200, 255 * (self.explosion_time / 30))) # Explosion violette
             # Dessiner le cercle extérieur de l'explosion
