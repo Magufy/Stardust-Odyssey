@@ -494,7 +494,7 @@ class LinkEnemy(Enemy):
         self.target_x = random.randint(margin, WIDTH - margin)
         self.target_y = random.randint(margin, HEIGHT - margin)
 
-    def update(self, player):
+    def update(self, player, enemies):
         # Gestion du mouvement
         if self.is_moving:
             dx = self.target_x - self.x
@@ -518,7 +518,6 @@ class LinkEnemy(Enemy):
         # Calculer les lasers actifs (Optimized)
         self.active_lasers = []
         # Access the global enemies list (ensure it's accessible)
-        global enemies
         for other_enemy in enemies:
             # Check only against other LinkEnemy instances, avoid self-check
             if isinstance(other_enemy, LinkEnemy) and other_enemy != self:
