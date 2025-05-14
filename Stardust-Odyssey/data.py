@@ -6,6 +6,7 @@ from player import Ship
 BLUE = (0,0,255)
 
 def save_data(credits, selected_skin, skins):
+    # Sauvegarde les données du joueur dans un fichier json
     with open("save_data.json", "w") as file:
         json.dump({
             "credits": credits,
@@ -34,6 +35,7 @@ def load_data():
                     "couleur_vaisseau": BLUE
                 }]
             }
+            # Écrit ces données dans un nouveau fichier
             with open("save_data.json", "w") as file:
                 json.dump(default_data, file)
             return default_data["credits"], default_data["selected_skin"], default_data["skins"]
