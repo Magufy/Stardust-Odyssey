@@ -878,7 +878,7 @@ def draw_game_info(window, font, score, player, wave_number, wave_text_timer, pl
     window.blit(score_text, (20, 20))
 
     # Numéro de vague
-    wave_text = font.render(f"Vague: {wave_number}", True, WHITE)
+    wave_text = font.render(f"Wave: {wave_number}", True, WHITE)
     window.blit(wave_text, (WIDTH - wave_text.get_width() - 20, 20))
 
     # Affichage du texte de nouvelle vague
