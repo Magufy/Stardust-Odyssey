@@ -34,7 +34,7 @@ pygame.display.set_caption("Nova Drift Prototype - Fullscreen Mode")
 
 
 
-def game_loop(selected_skin, p2p=None, remote_skin_info=None):
+def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
     global enemies
     global shop_upgrade # Ensure shop_upgrade is accessible
 
@@ -126,7 +126,6 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
 
     wave_number = 1
     score = 0
-    credits_earned = 0
     font = pygame.font.Font(None, 36)
     wave_text_timer = 0
 
@@ -337,7 +336,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
 
                 elif msg_type == 'game_over':
                     running = False
-                    show_game_over(score, credits_earned)
+                    show_game_over(score)
                     break # Exit message processing loop
 
                 elif msg_type == 'start_upgrade_phase':
@@ -371,7 +370,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                 p2p.envoyer_donnees({'type': 'game_over'})
                 game_over_sent = True
             running = False
-            show_game_over(score, credits_earned)
+            show_game_over(score)
             break # Exit main game loop
 
         # Mise à jour des mouvements
@@ -507,11 +506,11 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
 
         # Mettre à jour les balles et le score
         # Mettre à jour les balles du joueur local
-        score += update_bullets(local_ship, enemies, damage_manager)
+        update_bullets(local_ship, enemies, damage_manager)
         
         # Mettre à jour les balles du joueur distant si présent
         if remote_ship:
-            score += update_bullets(remote_ship, enemies, damage_manager)
+            update_bullets(remote_ship, enemies, damage_manager)
 
         # Mettre à jour les ennemis (serveur uniquement en multijoueur)
         if running and (is_server or not p2p):
@@ -564,7 +563,6 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
                     if enemy in enemies:
                         enemies.remove(enemy)
                         score += 10
-                        credits_earned += 1
 
         # Dessiner les éléments du jeu
         local_ship.draw(window)
@@ -667,8 +665,9 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
         p2p.fermer()
 
     # Sauvegarder les crédits gagnés
-    Shop().credits += credits_earned
-    save_data(Shop().credits, Shop().selected_skin, Shop().skins)
+    shop.credits += score//10
+    save_data(shop.credits, shop.selected_skin, shop.skins)
+    print("sauvegarde",shop.credits,score//10)
     
     # Remettre la musique du menu
     pygame.mixer.stop()  # Arrêter toute musique en cours
@@ -676,9 +675,7 @@ def game_loop(selected_skin, p2p=None, remote_skin_info=None):
     menu_music.set_volume(0.4)  # Volume à 40%
     menu_music.play(loops=-1)  # Boucle infinie
 
-# --- Modify update_bullets to return score ---
 def update_bullets(ship, enemies, damage_manager=None):
-    score_from_bullets = 0
     for bullet in ship.bullets[:]:
         bullet.move()
 
@@ -740,11 +737,6 @@ def update_bullets(ship, enemies, damage_manager=None):
                     bullet.hit_enemies.add(enemy)
                     enemies_hit_this_step.add(enemy)
 
-                    # Check if enemy died
-                    if enemy.health <= 0 and enemy in enemies:
-                        enemies.remove(enemy)
-                        score_from_bullets += 10  # Add score for killing enemy
-
                     # Handle piercing/bouncing AFTER damage application
                     if bullet.piercing > 0:
                         bullet.piercing -= 1
@@ -765,21 +757,20 @@ def update_bullets(ship, enemies, damage_manager=None):
                 if bullet in ship.bullets:
                     ship.bullets.remove(bullet)
 
-    return score_from_bullets
 
-
-def show_game_over(score, credits_earned):
+def show_game_over(score):
     """Affiche l'écran de fin de partie"""
     running = True
     font_large = pygame.font.Font(None, 72)
     font_medium = pygame.font.Font(None, 48)
     font_small = pygame.font.Font(None, 36)
+    credits_earned = score//10
 
     # Textes
     game_over_text = font_large.render("GAME OVER", True, RED)
     score_text = font_medium.render(f"Score: {score}", True, WHITE)
-    credits_text = font_medium.render(f"Credits earned: {credits_earned}", True, WHITE)
-    continue_text = font_small.render("press a key to continue", True, GRAY)
+    credits_text = font_medium.render(f"Crédits gagnés: {credits_earned}", True, WHITE)
+    continue_text = font_small.render("Appuyez sur une touche pour continuer", True, GRAY)
 
     # Minuteur pour rester un minimum sur l'écran de game over
     min_display_time = 180  # 3 secondes à 60 FPS
@@ -878,7 +869,7 @@ def draw_game_info(window, font, score, player, wave_number, wave_text_timer, pl
     window.blit(score_text, (20, 20))
 
     # Numéro de vague
-    wave_text = font.render(f"Wave: {wave_number}", True, WHITE)
+    wave_text = font.render(f"Vague: {wave_number}", True, WHITE)
     window.blit(wave_text, (WIDTH - wave_text.get_width() - 20, 20))
 
     # Affichage du texte de nouvelle vague
@@ -1001,13 +992,13 @@ class Shop:
             "play": Button(WIDTH // 2 - 83, HEIGHT*0.795 - 25, 162, 49, ""), 
             "shop": Button(WIDTH // 2 - 72, HEIGHT*0.857 - 25, 141, 40, ""),  
             "quit": Button(WIDTH // 2 - 83, HEIGHT*0.91 - 25, 162, 49, ""),
-            "back": Button(self.margin, self.margin, 100, 40, "BACK"),
+            "back": Button(self.margin, self.margin, 100, 40, "RETOUR"),
             "singleplayer": Button(WIDTH*0.425 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
             "multiplayer": Button(WIDTH*0.575 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
             "create_room": Button(WIDTH*0.4375 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
             "join_room": Button(WIDTH*0.5625 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
-            "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Enter"),
-            "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Play"),
+            "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Entrer"),
+            "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Jouer"),
         }
 
         # Champ de saisie pour l'adresse IP
@@ -1061,10 +1052,10 @@ class Shop:
         surface.blit(name_text, name_rect)
 
         if skin["unlocked"]:
-            button_text = "EQUIPPED" if self.selected_skin == skin else "SELECTED"
+            button_text = "ÉQUIPÉ" if self.selected_skin == skin else "SÉLECTIONNER"
             button_color = GREEN if self.selected_skin == skin else BLUE
         else:
-            button_text = "WATCH AD" if skin["price"] == "PUB" else f"{skin['price']} Crédits"
+            button_text = "REGARDER PUB" if skin["price"] == "PUB" else f"{skin['price']} Crédits"
             button_color = RED if self.credits < (skin["price"] if isinstance(skin["price"], int) else 0) else YELLOW
 
         button_rect = pygame.Rect(x + 10, y + self.card_height - 40, self.card_width - 20, 30)
@@ -1117,7 +1108,7 @@ class Shop:
 
             if self.p2p:
                 if self.p2p.running and self.p2p.connexion:
-                    network_status = "Connected"
+                    network_status = "Connecté"
                     network_color = GREEN
                     if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
                         network_status += f" (Joueur 2: {self.p2p.remote_skin_info.get('name', 'Inconnu')})"
@@ -1149,7 +1140,7 @@ class Shop:
                 # Gestion du menu de choix de mode
                 elif self.current_screen == "play_menu":
                     if self.buttons["singleplayer"].handle_event(event):
-                        game_loop(self.selected_skin)  # Mode solo
+                        game_loop(self.selected_skin, self)  # Mode solo
                     elif self.buttons["multiplayer"].handle_event(event):
                         self.current_screen = "multiplayer_menu"
                         # Initialize multijoueur attributes if they don't exist
@@ -1262,7 +1253,7 @@ class Shop:
                         current_p2p = self.p2p  # Store current p2p instance
                         self.p2p = None  # Reset shop's p2p reference
                         self.connexion_reussie = False  # Reset flag
-                        game_loop(self.selected_skin, current_p2p, self.remote_skin_info)
+                        game_loop(self.selected_skin, self, current_p2p, self.remote_skin_info)
                         # After game_loop returns, we are back in the shop menu
                         # Ensure p2p is closed if game_loop exits unexpectedly
                         if current_p2p and current_p2p.running:
@@ -1308,7 +1299,7 @@ class Shop:
                         current_p2p = self.p2p  # Store current p2p instance
                         self.p2p = None  # Reset shop's p2p reference
                         self.connexion_reussie = False  # Reset flag
-                        game_loop(self.selected_skin, current_p2p, self.remote_skin_info)
+                        game_loop(self.selected_skin, self, current_p2p, self.remote_skin_info)
                         # After game_loop returns, we are back in the shop menu
                         # Ensure p2p is closed if game_loop exits unexpectedly
                         if current_p2p and current_p2p.running:
