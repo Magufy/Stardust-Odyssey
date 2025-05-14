@@ -1061,10 +1061,10 @@ class Shop:
         surface.blit(name_text, name_rect)
 
         if skin["unlocked"]:
-            button_text = "ÉQUIPÉ" if self.selected_skin == skin else "SÉLECTIONNER"
+            button_text = "EQUIPPED" if self.selected_skin == skin else "SELECTED"
             button_color = GREEN if self.selected_skin == skin else BLUE
         else:
-            button_text = "REGARDER PUB" if skin["price"] == "PUB" else f"{skin['price']} Crédits"
+            button_text = "WATCH AD" if skin["price"] == "PUB" else f"{skin['price']} Crédits"
             button_color = RED if self.credits < (skin["price"] if isinstance(skin["price"], int) else 0) else YELLOW
 
         button_rect = pygame.Rect(x + 10, y + self.card_height - 40, self.card_width - 20, 30)
