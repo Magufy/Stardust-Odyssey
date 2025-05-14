@@ -778,8 +778,8 @@ def show_game_over(score, credits_earned):
     # Textes
     game_over_text = font_large.render("GAME OVER", True, RED)
     score_text = font_medium.render(f"Score: {score}", True, WHITE)
-    credits_text = font_medium.render(f"Crédits gagnés: {credits_earned}", True, WHITE)
-    continue_text = font_small.render("Appuyez sur une touche pour continuer", True, GRAY)
+    credits_text = font_medium.render(f"Credits earned: {credits_earned}", True, WHITE)
+    continue_text = font_small.render("press a key to continue", True, GRAY)
 
     # Minuteur pour rester un minimum sur l'écran de game over
     min_display_time = 180  # 3 secondes à 60 FPS
