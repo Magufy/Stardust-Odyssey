@@ -1001,13 +1001,13 @@ class Shop:
             "play": Button(WIDTH // 2 - 83, HEIGHT*0.795 - 25, 162, 49, ""), 
             "shop": Button(WIDTH // 2 - 72, HEIGHT*0.857 - 25, 141, 40, ""),  
             "quit": Button(WIDTH // 2 - 83, HEIGHT*0.91 - 25, 162, 49, ""),
-            "back": Button(self.margin, self.margin, 100, 40, "RETOUR"),
+            "back": Button(self.margin, self.margin, 100, 40, "BACK"),
             "singleplayer": Button(WIDTH*0.425 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
             "multiplayer": Button(WIDTH*0.575 - 83, HEIGHT*0.8825 - 25, 160, 40, ""),
             "create_room": Button(WIDTH*0.4375 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
             "join_room": Button(WIDTH*0.5625 - 83, HEIGHT*0.955 - 25, 162, 35, ""),
-            "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Entrer"),
-            "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Jouer"),
+            "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Enter"),
+            "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Play"),
         }
 
         # Champ de saisie pour l'adresse IP
