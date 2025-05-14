@@ -1117,7 +1117,7 @@ class Shop:
 
             if self.p2p:
                 if self.p2p.running and self.p2p.connexion:
-                    network_status = "Connecté"
+                    network_status = "Connected"
                     network_color = GREEN
                     if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
                         network_status += f" (Joueur 2: {self.p2p.remote_skin_info.get('name', 'Inconnu')})"
