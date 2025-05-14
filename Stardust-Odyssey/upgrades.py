@@ -10,6 +10,7 @@ WIDTH, HEIGHT = window.get_size()
 pygame.display.set_caption("Nova Drift Prototype - Fullscreen Mode")
 
 # Couleurs
+#Définition des couleurs pour les réutiliser plusn tard facilement
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
@@ -18,8 +19,11 @@ YELLOW = (255, 255, 0)
 GRAY = (128, 128, 128)
 BLACK = (0, 0, 0)
 
-# Store all_upgrades globally or pass it around if needed elsewhere
-# Updated list with levels, max levels, and IDs
+
+
+# Stock toutes les upgrades globales ou les passes pour les réutiliser ailleurs
+
+# Liste des niveaux, niveaux max et les IDs mise à jour
 all_upgrades = [
     {"name": "Health Up", "id": "health_up", "effect": "Max Health +20","niveau":0,"niveaumax":10,"image":"images/upgrades/1_health_up.png",
      "apply": lambda p:[setattr(p, "max_health", p.max_health + 20),setattr(p, "health", p.health + 20)]},
@@ -94,32 +98,37 @@ game_upgrades=all_upgrades
 
 def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
     """Affiche les améliorations disponibles et applique celle choisie"""
-    # Stop any currently playing music
+   
+    # Stop toute music qui est entrain d'etre jouée
     pygame.mixer.stop()
     
-    # Play shop sound when entering the shop
+    
+    # Joue la musique associée au shop quand le shop est ouvert
     son_shop = pygame.mixer.Sound("sons/shop.mp3")
     son_shop.set_volume(0.5)  # Set volume to 50%
     son_shop.play(loops=-1)  # -1 means loop indefinitely
     
-    # Determine if this is server (host) or client
+    
+    # Détermine si le serveur hébèrge ou est client
     is_server = p2p and p2p.est_serveur if p2p else True
 
-    # Client waits for server's choice
+    
+    # Le client attend pour le choix du serveur
     if p2p and not is_server:
-        # Show waiting message
+        # Afficher le message d'attente
         font = pygame.font.Font(None, 48)
         print("[DEBUG] Entrée dans la phase d'attente du choix de l'hôte (client)")
         waiting = True
 
-        # Display waiting screen
+        # Afficher l'écran d'attente
         while waiting:
             window.fill((20, 20, 40))  # Dark blue background
             wait_text = font.render("En attente du choix de l'hôte...", True, WHITE)
             window.blit(wait_text, (WIDTH // 2 - wait_text.get_width() // 2, HEIGHT // 2))
             pygame.display.flip()
 
-            # Process events (to keep the window responsive)
+            
+            # Gère les événements pour conserver une fenetre active
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -128,17 +137,18 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                         window.destroy()
                         game_over_sent = True
 
-            # Check for network messages using the non-blocking queue
+           
+            # Vérifier les messages réseau en utilisant la file d'attente non bloquante
             if network_queue:
                 try:
-                    while True: # Process all messages in the queue
+                    while True: # Gère tous les messages dans la queue
                         msg = network_queue.get_nowait()
                         print(f"[DEBUG] Message reçu dans la phase d'attente (client) : {msg}")
                         if msg.get('type') == 'upgrade_choice':
                             upgrade_id = msg.get('upgrade_id')
                             print(f"Client: reçu amélioration '{upgrade_id}'")
 
-                            # Find and apply the upgrade
+                            # Trouve et applique l'upgrade
                             selected_upgrade_config = None
                             for upgrade in game_upgrades:
                                 if upgrade.get('id') == upgrade_id:
@@ -174,29 +184,32 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                                     print(f"Client: Skipping already applied upgrade {upgrade_id}, current level: {current_level}, server level: {server_level}")
                                 
                                 waiting = False
-                                # No need to break inner loop, waiting=False handles outer loop exit
+                                # Pas besoin de quitter la boucle interne, waiting=False gère la sortie de la boucle externe
                             else:
                                 print(f"Erreur: Amélioration reçue inconnue ID: {upgrade_id}")
-                                # Potentially ask server again or handle error
-                        # Handle other message types if necessary in the future
+                                # Redemander éventuellement au serveur ou gérer l’erreur
+                        # Gérer d’autres types de messages si nécessaire à l’avenir
                 except Empty:
-                    # print("[DEBUG] network_queue vide, attente...") # Reduce log noise
-                    pass # No messages in the queue, continue waiting
+                    
+                    pass # Pas de message dans la queue, continue d'attendre
 
-            # Short sleep to prevent excessive CPU usage and allow drawing
+            #Courte pause pour éviter une utilisation excessive du CPU et permettre l'affichage
             pygame.time.delay(50)
 
         # La musique sera restaurée par le message 'music_update' envoyé par le serveur
         return True # Return True if upgrade was received and applied
 
-    # --- Server (host) or mode solo Logic ---
-    # Filter upgrades that are not maxed out
+    
+    # --- Serveur (hébergeur) ou mode solo ---
+   
+    # Filtre upgrades qui ne dépassent pas le maximum
     available_for_selection = [upgrade for upgrade in game_upgrades if upgrade.get('niveau', 0) < upgrade['niveaumax']+1]
 
-    # Handle case where no upgrades are available
+    # gère les cas ou il n'y a pas d'upgrades
     if not available_for_selection:
         print("Toutes les améliorations sont au niveau maximum!")
-        # Display a message and wait for input to continue
+        
+        # Montre un message et attend pour l'action de continuer
         font = pygame.font.Font(None, 48)
         no_upgrades_running = True
         while no_upgrades_running:
@@ -213,16 +226,18 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                 if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                     no_upgrades_running = False
             pygame.time.delay(10)
-        return True # Continue the game
+        return True # Continue le jeu
 
-    # Select 3 random available upgrades
+    
+    # Selection aléatoire de trois upgrades
     upgrades_to_show = random.sample(available_for_selection, min(3, len(available_for_selection)))
     font = pygame.font.Font(None, 36)
     shop_running = True
     selected_index = None
     upgrade_rects = [] # Store rectangles and their indices
 
-    # --- Host's UI Loop --- # THIS IS THE CRITICAL PART
+    
+    # --- Hébèrge la loupe UI 
     selection_block_time = time.time() + 2 
     while shop_running:
         window.fill((20, 20, 40))  # Fond bleu foncé
@@ -236,17 +251,20 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
         # Affiche les améliorations disponibles
         mouse_pos = pygame.mouse.get_pos()
         
-        # Calculate positions for the 3 upgrade boxes side by side
-        box_width = WIDTH // 3 - 40  # Width of each upgrade box with margins
-        box_height = 300  # Height of each upgrade box
-        margin = 20  # Margin between boxes
+        
+        # Calcule la position pour les 3 cases pour les upgrades cote à cote
+        box_width = WIDTH // 3 - 40 # Etendue de chaque case upgrade avec des marges
+        box_height = 300   #hauteur de chaque case upgrade
+        margin = 20  #Marge entre les cases
         
         for i, upgrade in enumerate(upgrades_to_show):
-            # Position each box horizontally next to each other
+            
+            # Position de chaque cases horizontalement cote à cote
             x_pos = margin + i * (box_width + margin)
             y_pos = HEIGHT // 2 - box_height // 2
             
-            # Create the main rectangle for this upgrade
+           
+            # Création du rétangle principal pour cette upgrade
             rect = pygame.Rect(x_pos, y_pos, box_width, box_height)
             upgrade_rects.append((rect, i))
             
@@ -255,32 +273,35 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
             border_width = 3 if is_hovered else 2
             pygame.draw.rect(window, color, rect, border_width, border_radius=5)
             
-            # Name and level at the top
+           
+            # Nom et niveau en haut
             level_text = f" (Niv {int(upgrade['niveau'])}/{upgrade.get('niveaumax', 1)})"
             
             name_text = font.render(f"{i+1}. {upgrade['name']}{level_text}", True, color)
             name_rect = name_text.get_rect(center=(rect.centerx, rect.y + 30))
             window.blit(name_text, name_rect)
             
-            # Image in the middle
+            # Image au milieu
             try:
                 image_path = upgrade.get('image')
                 if image_path:
                     upgrade_image = pygame.image.load(image_path).convert_alpha()
-                    # Scale the image to fit in the box
+                    
+                    #échelle de l'image à faire entrer dans la case
                     image_size = min(box_width - 40, 120)
                     upgrade_image = pygame.transform.scale(upgrade_image, (image_size, image_size))
                     image_rect = upgrade_image.get_rect(center=(rect.centerx, rect.centery))
                     window.blit(upgrade_image, image_rect)
             except Exception as e:
                 print(f"Error loading upgrade image: {e}")
-                # Draw a placeholder if image fails to load
+                
+                # Déssine un espace réservé si l'image ne se charge pas
                 placeholder = pygame.Surface((80, 80))
                 placeholder.fill(GRAY)
                 placeholder_rect = placeholder.get_rect(center=(rect.centerx, rect.centery))
                 window.blit(placeholder, placeholder_rect)
             
-            # Description at the bottom
+            # Description en bas
             effect_font = pygame.font.Font(None, 28)
             effect_text = effect_font.render(upgrade['effect'], True, GRAY)
             effect_rect = effect_text.get_rect(center=(rect.centerx, rect.bottom - 30))
@@ -305,9 +326,11 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
 
         pygame.time.delay(10)
 
-    # --- End of Host's UI Loop ---
+   
+    # --- Fin du la boucle UI de l'invité ---
 
-    # Process the selected upgrade
+ 
+    # gère les upgrades sélctionées
     if selected_index is not None and 0 <= selected_index < len(upgrades_to_show):
         selected_upgrade = upgrades_to_show[selected_index]
         apply_func = selected_upgrade.get('apply')
@@ -315,21 +338,19 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
 
         if not apply_func:
             print(f"Erreur: Fonction 'apply' manquante pour l'amélioration {selected_upgrade.get('name')}")
-            return False # Indicate failure
+            return False # Indique une panne/échec
 
-        # Apply to host's ship (Player 1)
+        
+        # Applique au vaisseau de l'invité (Player 1)
         apply_func(player)
 
-        # In multijoueur, apply ALL upgrades to player 2 locally
+        
+        # Dans multijoueur, applique TOUTES les upgrades à player 2 localement
         if player2:  # Appliquer TOUTES les upgrades au joueur 2
             apply_func(player2)  # Apply upgrade locally to player 2
-        #    p2p.envoyer_donnees({
-        #        'type': 'upgrade_choice',
-        #        'upgrade_id': upgrade_id,
-        #        'is_health_upgrade': is_health_upgrade  # Tell client if this is a health upgrade
-        #    })
-
-        # Find the original upgrade in game_upgrades to increment its level
+     
+        
+        # Trouve l'upgrade originale dans game_upgrades pour incrémenter ce niveau
         original_upgrade_config = None
         if upgrade_id:
             for upgrade in game_upgrades:
@@ -338,16 +359,19 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                     break
 
         if original_upgrade_config:
-            # Ensure 'niveau' exists before incrementing
+            
+            # Assure que 'niveau' existe avant d'incrémenter
             if 'niveau' not in original_upgrade_config:
-                original_upgrade_config['niveau'] = 1 # Initialize if missing
+                original_upgrade_config['niveau'] = 1 # Initialise s'il manque
             original_upgrade_config['niveau'] += 1
             print(f"Amélioration appliquée localement: {original_upgrade_config['name']} (Niveau {original_upgrade_config['niveau']})")
         else:
              print(f"Erreur: Impossible de trouver l'amélioration originale avec ID: {upgrade_id} pour incrémenter le niveau.")
-             # Continue anyway, but level won't track correctly
+             
+             # Continue dans tous les cas, mais le niveau ne suit pas correctement
 
-        # In multijoueur (server), send upgrade choice to client
+        
+        # dans multijoueur (serveur), envoie le choix de l'upgrade au client
         if p2p and is_server:
             if upgrade_id:
                 # Utiliser original_upgrade_config au lieu de selected_upgrade_config qui n'est pas défini ici
@@ -368,10 +392,10 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
             else:
                 print("Erreur: ID d'amélioration manquant pour l'envoi réseau.")
 
-        return True # Upgrade selected and processed
+        return True # Upgrade sélectionnée at gérée
     elif selected_index is None:
         print("Aucune amélioration sélectionnée (Shop fermé?).")
-        return False # Indicate no selection was made (e.g., window closed)
+        return False  # Indique qu'aucune sélection n'a été faite 
     else:
         print(f"Erreur: Index sélectionné invalide: {selected_index}")
         return False
