@@ -98,7 +98,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
         
         # Déterminer le type de musique en fonction du numéro de vague
         cycle_wave = 1 % 20
-        music_type = "boss" if cycle_wave % 5 == 0 else "vague"
+        music_type = "boss_final" if cycle_wave ==0 else "boss" if cycle_wave % 5 == 0 else "vague"
         
         # Si en multijoueur, envoyer le type de musique au client
         if p2p:
@@ -317,6 +317,10 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                         pygame.mixer.stop()
                         
                         # Jouer la musique appropriée
+                        if music_type == 'boss_final':
+                            son_boss_final = pygame.mixer.Sound("sons/boss_final.mp3")
+                            son_boss_final.set_volume(0.4)  # Volume à 40%
+                            son_boss_final.play(loops=-1)  # -1 signifie boucle infinie
                         if music_type == 'boss':
                             son_boss = pygame.mixer.Sound("sons/boss.mp3")
                             son_boss.set_volume(0.4)  # Volume à 40%
