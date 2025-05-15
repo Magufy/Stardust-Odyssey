@@ -979,11 +979,11 @@ class Shop:
 
         self.skins = [
             {"name": "Vaisseau Basique", "price": "gratuit", "unlocked": True, "couleur_vaisseau": BLUE},
-            {"name": "Vaisseau Cristal", "price": 100, "unlocked": False, "couleur_vaisseau": (150, 200, 255)},
-            {"name": "Vaisseau Améthyste", "price": 300, "unlocked": False, "couleur_vaisseau": (200,0,200)},
-            {"name": "Vaisseau Plasma", "price": 250, "unlocked": False, "couleur_vaisseau": (255, 100, 255)},
-            {"name": "Vaisseau Emeraude", "price": "PUB","unlocked":False,"couleur_vaisseau": (0,255,50)},
-            {"name": "Vaisseau Diamant", "price": 400, "unlocked": False, "couleur_vaisseau": (0,255,255)}
+            {"name": "Vaisseau Cristal", "price": 100, "unlocked": False, "couleur_vaisseau": (100, 150, 205)},
+            {"name": "Vaisseau Améthyste", "price": 300, "unlocked": False, "couleur_vaisseau": (150,0,150)},
+            {"name": "Vaisseau Plasma", "price": 250, "unlocked": False, "couleur_vaisseau": (205, 50, 205)},
+            {"name": "Vaisseau Emeraude", "price": "PUB","unlocked":False,"couleur_vaisseau": (0,205,0)},
+            {"name": "Vaisseau Diamant", "price": 400, "unlocked": False, "couleur_vaisseau": (0,205,205)}
         
 
         # Appliquer les skins débloqués chargés depuis le json
