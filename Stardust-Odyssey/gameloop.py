@@ -983,7 +983,7 @@ class Shop:
             {"name": "Vaisseau Améthyste", "price": 300, "unlocked": False, "couleur_vaisseau": (150,0,150)},
             {"name": "Vaisseau Plasma", "price": 250, "unlocked": False, "couleur_vaisseau": (205, 50, 205)},
             {"name": "Vaisseau Emeraude", "price": "PUB","unlocked":False,"couleur_vaisseau": (0,205,0)},
-            {"name": "Vaisseau Diamant", "price": 400, "unlocked": False, "couleur_vaisseau": (0,205,205)}
+            {"name": "Vaisseau Diamant", "price": 400, "unlocked": False, "couleur_vaisseau": (0,205,205)}]
         
 
         # Appliquer les skins débloqués chargés depuis le json
