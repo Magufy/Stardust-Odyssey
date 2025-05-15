@@ -123,8 +123,8 @@ class P2PCommunication:
         try:
             print(f"Tentative de connexion à {self.ip_hote}:{self.port}...")
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Set a timeout for connect
-            self.socket.settimeout(10.0)  # 10 seconds timeout
+            # Définir un délai d'attente pour la connexion
+            self.socket.settimeout(10.0)  # Délai d'attente de 10 secondes
             self.socket.connect((self.ip_hote, self.port))
             self.connexion = self.socket
             self.connexion.settimeout(None)
@@ -180,7 +180,7 @@ class P2PCommunication:
 
             # Recois les infos de skin du joueur a distance
             print("  Attente du skin distant...")
-            self.connexion.settimeout(5.0)  # timeout
+            self.connexion.settimeout(5.0)  # délai d'attente
             received_data = b''
             start_time = time.time()
 
@@ -199,7 +199,7 @@ class P2PCommunication:
                     print(f"  Erreur lors de la réception: {e}")
                     return False
 
-            self.connexion.settimeout(None)  # Reset timeout
+            self.connexion.settimeout(None)  # Réinitialiser le délai d'attente
 
             if self.message_separator not in received_data:
                 print("  Délai d'attente dépassé en attendant les infos du skin distant.")
@@ -238,34 +238,34 @@ class P2PCommunication:
         """Envoie des données JSON à l'autre pair, gère les différents types de messages."""
         try:
             current_time = time.time()
-            # Rate limiting for 'state' type messages only
+            # Limitation du débit pour les messages de type « état » uniquement
             if data.get('type') == 'state':
                 if current_time - self.last_send_time < self.send_interval:
-                    return  # Skip sending if too soon
+                    return  # Sauter l'envoi s'il est trop tôt
                 self.last_send_time = current_time
 
             with self.data_lock:
-                # Ensure data is a dictionary
+                # S'assurer que les données sont un dictionnaire
                 if not isinstance(data, dict):
                     print("Erreur: Les données à envoyer doivent être un dictionnaire.")
-                    return False  # Or handle appropriately
+                    return False  # Ou gérer de manière appropriée
 
-                # Prepare message: Add type if missing (shouldn't happen with new structure)
+                # Préparer le message : Ajouter le type s'il manque (ne devrait pas se produire avec la nouvelle structure)
                 if 'type' not in data:
-                    data['type'] = 'unknown'  # Fallback, but indicates an issue
+                    data['type'] = 'unknown'  # Fallback, mais indique un problème
 
-                # Serialize and send
+                # envoi
                 message = json.dumps(data).encode('utf-8') + self.message_separator
                 self.connexion.sendall(message)
-                return True  # Indicate successful send attempt
+                return True  # Indique que la tentative d'envoi a réussi
 
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             print("Erreur de connexion lors de l'envoi (pair déconnecté?).")
-            self.running = False  # Stop communication threads/loops
+            self.running = False  # Arrêter les fils de communication/les boucles
             return False
         except Exception as e:
             print(f"Erreur lors de l'envoi des données ({data.get('type', '?')}): {e}")
-            return False  # failure
+            return False  # défaillance
 
     def recevoir_donnees(self):
         """Reçoit et décode les messages JSON entrants."""
