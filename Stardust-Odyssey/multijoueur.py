@@ -272,7 +272,8 @@ class P2PCommunication:
         try:
             data = self.connexion.recv(4096)
             if not data:
-                # Connection closed by peer
+                
+                # Connexion fermée par l'homologue
                 print("Connexion fermée par le pair.")
                 self.running = False
                 return None
@@ -288,7 +289,7 @@ class P2PCommunication:
                 try:
                     # Decode le JSON
                     data_dict = json.loads(message.decode('utf-8'))
-                    messages.append(data_dict)  # Collect all received messages
+                    messages.append(data_dict) # Collect all received messages
                 except json.JSONDecodeError:
                     print(f"Erreur de décodage JSON pour le message: {message[:100]}")  # skip les erreurs de message
                     continue
@@ -327,14 +328,14 @@ class P2PCommunication:
                 break
 
     def fermer(self):
-        if not self.running:  # Prevent multiple closes
+        if not self.running:  # Empêcher les fermetures multiples
             return
         self.running = False
-        # Close connection
+        # Fermer la connexion
         if self.connexion:
             try:
                 self.connexion.shutdown(socket.SHUT_RDWR)
-            except OSError:  # Socket might already be closed
+            except OSError:  # Fermer le socket du serveur s'il existe# Le socket peut déjà être fermé
                 pass
             except Exception as e:
                 print(f"Erreur lors de l'arrêt de la connexion: {e}")
@@ -345,7 +346,7 @@ class P2PCommunication:
                     print(f"Erreur lors de la fermeture de la connexion: {e}")
                 self.connexion = None
 
-        # Close server socket if it exists
+        # Fermer le socket du serveur s'il existe
         if self.socket and self.est_serveur:
             try:
                 self.socket.close()
