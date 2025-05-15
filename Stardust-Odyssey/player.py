@@ -23,10 +23,10 @@ class Ship:
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.angle = 0
         self.bullets = []
-        self. velocite_haut=0
-        self. velocite_bas=0
-        self. velocite_droite=0
-        self. velocite_gauche=0
+        self.velocite_haut=0
+        self.velocite_bas=0
+        self.velocite_droite=0
+        self.velocite_gauche=0
 
         # Stats base :
         self.speed = ship_speed
@@ -94,34 +94,34 @@ class Ship:
     # Définition des touches associées aux mouvements
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_z] and self. velocite_haut < 1 :  # Avancer
-            self. velocite_haut += 0.02
-        if keys[pygame.K_s] and self. velocite_bas < 1 :  # Reculer
-            self. velocite_bas += 0.02
-        if keys[pygame.K_q] and self. velocite_gauche < 1 :  # Gauche
-            self. velocite_gauche += 0.02
-        if keys[pygame.K_d] and self. velocite_droite < 1 :  # Droite
-            self. velocite_droite += 0.02
+        if keys[pygame.K_z] and self.velocite_haut < 1 :  # Avancer
+            self.velocite_haut += 0.02
+        if keys[pygame.K_s] and self.velocite_bas < 1 :  # Reculer
+            self.velocite_bas += 0.02
+        if keys[pygame.K_q] and self.velocite_gauche < 1 :  # Gauche
+            self.velocite_gauche += 0.02
+        if keys[pygame.K_d] and self.velocite_droite < 1 :  # Droite
+            self.velocite_droite += 0.02
 
         # Définition de la vitesse du vaisseau
-        if self. velocite_haut > 0 :
-            self.rect.y -= self. velocite_haut* self.speed
-        if self. velocite_bas > 0 :
-            self.rect.y += self. velocite_bas* self.speed
-        if self. velocite_gauche > 0 :
-            self.rect.x -= self. velocite_gauche* self.speed
-        if self. velocite_droite > 0 :
-            self.rect.x += self. velocite_droite* self.speed
+        if self.velocite_haut > 0 :
+            self.rect.y -= self.velocite_haut* self.speed
+        if self.velocite_bas > 0 :
+            self.rect.y += self.velocite_bas* self.speed
+        if self.velocite_gauche > 0 :
+            self.rect.x -= self.velocite_gauche* self.speed
+        if self.velocite_droite > 0 :
+            self.rect.x += self.velocite_droite* self.speed
 
         #permet de simuler l'inertie du vaisseau en companssant les accélérations
-        if self. velocite_haut > 0 and not keys[pygame.K_z]:
-            self. velocite_haut -= 0.01
-        if self. velocite_bas > 0 and not keys[pygame.K_s]:
-            self. velocite_bas -= 0.01
-        if self. velocite_gauche > 0 and not keys[pygame.K_q]:
-            self. velocite_gauche -= 0.01
-        if self. velocite_droite > 0 and not keys[pygame.K_d]:
-            self. velocite_droite -= 0.01
+        if self.velocite_haut > 0 and not keys[pygame.K_z]:
+            self.velocite_haut -= 0.01
+        if self.velocite_bas > 0 and not keys[pygame.K_s]:
+            self.velocite_bas -= 0.01
+        if self.velocite_gauche > 0 and not keys[pygame.K_q]:
+            self.velocite_gauche -= 0.01
+        if self.velocite_droite > 0 and not keys[pygame.K_d]:
+            self.velocite_droite -= 0.01
 
         #Téléportation de bord à bord de l'écran
         #enlève de la vie si, utilisation excessive de ce mode de voyage
