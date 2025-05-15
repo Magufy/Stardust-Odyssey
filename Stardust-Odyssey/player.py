@@ -360,7 +360,7 @@ def creer_vaisseau(skin_info, damage_manager):
             'ship_bullet_piercing': 3,
             'ship_range': 150,
             'ship_speed': 4.5,
-            'ship_damage':20,
+            'ship_damage':50,
             'ship_reload_speed': 0.5,
             'ship_bullet_speed':10
         })
