@@ -7,7 +7,7 @@ def spawn_wave(wave_number, play_music=True): # Définie l'apparation et le chan
     enemies = []
     cycle=1 + wave_number//20
     cycle_wave=wave_number%20
-    num_enemies = cycle_wave + 3*cycle**2
+    num_enemies = cycle_wave + 5*cycle**3 -2  # de plus en plus et tres vite beaucoup
     
     # Déterminer le type de musique à jouer
     music_type = "boss" if cycle_wave % 5 == 0 else "vague"
