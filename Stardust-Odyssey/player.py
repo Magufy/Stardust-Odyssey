@@ -431,32 +431,7 @@ class Bullet:
 
         self.rotated_image= pygame.transform.rotate(self.image,math.degrees(self.angle))
         window.blit(self.rotated_image, (self.x, self.y))   # Afficher l'image du projectile à sa position (x, y
-        # Si l'explosion est active et que le rayon d'explosion est supérieur à 0
-        if self.is_exploding and self.explosion_radius > 0:
-            # Calculer le rayon actuel de l'explosion en fonction du temps écoulé
-            current_radius = self.explosion_radius * (self.explosion_time / 60)
-            # Définir la couleur de l'explosion en fonction de l'origine du tir (local ou non)
-            if self.fired_by_local:
-                color = (255, 100, 50, min(200, 255 * (self.explosion_time / 30))) # Explosion rouge/orange
-            else: 
-                color = (150, 50, 255, min(200, 255 * (self.explosion_time / 30))) # Explosion violette
-            # Dessiner le cercle extérieur de l'explosion
-            pygame.draw.circle(
-                window, 
-                color,
-                (int(self.x), int(self.y)),
-                int(current_radius),
-                3
-            )
-         # Dessiner un cercle intérieur plus petit et plus lumineux
-            pygame.draw.circle(
-                window,
-                (255, 255, 255, min(255, 300 * (self.explosion_time / 60))),
-                (int(self.x), int(self.y)),
-                int(current_radius * 0.4)
-            )
-            # Réduire le temps restant pour l'animation d'explosion
-            self.explosion_time -= 1
+        
 
     def explode(self, enemies, damage_manager=None):
          # Si l'explosion n'a pas encore eu lieu et que le rayon est supérieur à 0
