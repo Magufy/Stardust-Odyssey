@@ -773,8 +773,8 @@ def show_game_over(score):
     # Textes
     game_over_text = font_large.render("GAME OVER", True, RED)
     score_text = font_medium.render(f"Score: {score}", True, WHITE)
-    credits_text = font_medium.render(f"Crédits gagnés: {credits_earned}", True, WHITE)
-    continue_text = font_small.render("Appuyez sur une touche pour continuer", True, GRAY)
+    credits_text = font_medium.render(f"Credits earned: {credits_earned}", True, WHITE)
+    continue_text = font_small.render("Press a key to continue", True, GRAY)
 
     # Minuteur pour rester un minimum sur l'écran de game over
     min_display_time = 180  # 3 secondes à 60 FPS
@@ -873,12 +873,12 @@ def draw_game_info(window, font, score, player, wave_number, wave_text_timer, pl
     window.blit(score_text, (20, 20))
 
     # Numéro de vague
-    wave_text = font.render(f"Vague: {wave_number}", True, WHITE)
+    wave_text = font.render(f"Wave: {wave_number}", True, WHITE)
     window.blit(wave_text, (WIDTH - wave_text.get_width() - 20, 20))
 
     # Affichage du texte de nouvelle vague
     if wave_text_timer > 0:
-        wave_announcement = font.render(f"Vague {wave_number}", True, YELLOW)
+        wave_announcement = font.render(f"Wave {wave_number}", True, YELLOW)
         wave_rect = wave_announcement.get_rect(center=(WIDTH//2, HEIGHT//3))
         window.blit(wave_announcement, wave_rect)
 
@@ -996,13 +996,13 @@ class Shop:
             "play": Button(WIDTH // 2 - 83, HEIGHT*0.795 - 25, 162*WIDTH//1536, 49*HEIGHT//864, ""), 
             "shop": Button(WIDTH // 2 - 72, HEIGHT*0.857 - 25, 141*WIDTH//1536, 40*HEIGHT//864, ""),  
             "quit": Button(WIDTH // 2 - 83, HEIGHT*0.91 - 25, 162*WIDTH//1536, 49*HEIGHT//864, ""),
-            "back": Button(self.margin, self.margin, 100, 40, "RETOUR"),
+            "back": Button(self.margin, self.margin, 100, 40, "BACK"),
             "singleplayer": Button(WIDTH*0.425 - 83, HEIGHT*0.8825 - 25, 160*WIDTH//1536, 40*HEIGHT//864, ""),
             "multiplayer": Button(WIDTH*0.575 - 83, HEIGHT*0.8825 - 25, 160*WIDTH//1536, 40*HEIGHT//864, ""),
             "create_room": Button(WIDTH*0.4375 - 83, HEIGHT*0.955 - 25, 162*WIDTH//1536, 35*HEIGHT//864, ""),
             "join_room": Button(WIDTH*0.5625 - 83, HEIGHT*0.955 - 25, 162*WIDTH//1536, 35, ""),
-            "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Entrer"),
-            "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Jouer"),
+            "enter": Button(WIDTH // 2 + 120, HEIGHT // 2 - 25, 100, 50, "Enter"),
+            "jouer": Button(WIDTH // 2 - 100, HEIGHT // 2 + 100, 200, 50, "Play"),
         }
 
         # Champ de saisie pour l'adresse IP
@@ -1060,10 +1060,10 @@ class Shop:
         surface.blit(description_text, description_rect)
 
         if skin["unlocked"]:
-            button_text = "ÉQUIPÉ" if self.selected_skin == skin else "SÉLECTIONNER"
+            button_text = "ÉQUIPED" if self.selected_skin == skin else "SELECT"
             button_color = GREEN if self.selected_skin == skin else BLUE
         else:
-            button_text = "REGARDER PUB" if skin["price"] == "PUB" else f"{skin['price']} Crédits"
+            button_text = "LOOK AT ADVERTISING" if skin["price"] == "PUB" else f"{skin['price']} Credits"
             button_color = RED if self.credits < (skin["price"] if isinstance(skin["price"], int) else 0) else YELLOW
 
         button_rect = pygame.Rect(x + 10, y + self.card_height - 40, self.card_width - 20, 30)
@@ -1093,7 +1093,7 @@ class Shop:
         surface.fill(BLACK)
         self.buttons["back"].draw(surface)
 
-        credits_text = self.font.render(f"Crédits: {self.credits}", True, WHITE)
+        credits_text = self.font.render(f"Credits: {self.credits}", True, WHITE)
         surface.blit(credits_text, (WIDTH - 200, self.margin))
 
         for i, skin in enumerate(self.skins):
@@ -1116,7 +1116,7 @@ class Shop:
 
             if self.p2p:
                 if self.p2p.running and self.p2p.connexion:
-                    network_status = "Connecté"
+                    network_status = "Connected"
                     network_color = GREEN
                     if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
                         network_status += f" (Joueur 2: {self.p2p.remote_skin_info.get('name', 'Inconnu')})"
@@ -1125,7 +1125,7 @@ class Shop:
                     network_status = ""
                     network_color = WHITE
             elif self.current_screen == "multiplayer_menu" and hasattr(self, 'entering_ip') and self.entering_ip:
-                network_status = "Saisie de l'IP..."
+                network_status = "Entering the IP..."
             elif self.current_screen == "multiplayer_menu":
                 # Supprimer le message d'attente
                 network_status = ""
@@ -1488,13 +1488,13 @@ class Shop:
                 # Si la connexion est établie et que nous sommes sur l'écran create_room
                 if hasattr(self, 'connexion_reussie') and self.connexion_reussie and "jouer" in self.buttons:
                     # Afficher un message de confirmation
-                    connected_text = self.font.render("Joueur connecté !", True, GREEN)
+                    connected_text = self.font.render("Player connected!", True, GREEN)
                     screen.blit(connected_text, (WIDTH // 2 - connected_text.get_width() // 2, HEIGHT // 2))
                     # Afficher le bouton jouer
                     self.buttons["jouer"].draw(screen)
                 else:
                     # Display waiting message seulement si pas connecté
-                    waiting_text = self.font.render("En attente de joueur...", True, WHITE)
+                    waiting_text = self.font.render("Waiting for player...", True, WHITE)
                     screen.blit(waiting_text, (WIDTH // 2 - waiting_text.get_width() // 2, HEIGHT // 2))
                 
             elif self.current_screen == "join_room_screen":
@@ -1504,7 +1504,7 @@ class Shop:
                 
                 # Show IP input box
                 if hasattr(self, 'input_box'):
-                    ip_prompt = self.font.render("Entrez l'IP du serveur:", True, WHITE)
+                    ip_prompt = self.font.render("Enter the server's IP:", True, WHITE)
                     screen.blit(ip_prompt, (WIDTH // 2 - ip_prompt.get_width() // 2, HEIGHT // 2 - 50))
                     self.input_box.draw(screen)
                     if "enter" in self.buttons: self.buttons["enter"].draw(screen)
@@ -1519,7 +1519,7 @@ class Shop:
                 # Si la connexion est établie et que nous sommes sur l'écran join_room
                 if hasattr(self, 'connexion_reussie') and self.connexion_reussie and "jouer" in self.buttons:
                     # Afficher un message de confirmation de connexion
-                    connected_text = self.font.render("Connecté au serveur", True, GREEN)
+                    connected_text = self.font.render("Connected to the server", True, GREEN)
                     screen.blit(connected_text, (WIDTH // 2 - connected_text.get_width() // 2, HEIGHT // 2 + 50))
                     # Afficher le bouton jouer avec un décalage vertical pour éviter la superposition
                     jouer_button = self.buttons["jouer"]
