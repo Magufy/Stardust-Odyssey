@@ -4,7 +4,7 @@ import threading
 import time
 from queue import Queue
 import socket
-import cv2
+import cv2        (pip install opencv-python)
 import numpy as np
 
 from player import Ship, creer_vaisseau, Bullet
@@ -27,13 +27,13 @@ GRAY = (128, 128, 128)
 BLACK = (0, 0, 0)
 
 pygame.init()
-# Paramètres de la fenêtre en plein écran
+#Paramètres de la fenêtre en plein écran
 window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 WIDTH, HEIGHT = window.get_size()
 pygame.display.set_caption("Nova Drift Prototype - Fullscreen Mode")
 
 
-
+# Game loop
 def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
     global enemies
     global shop_upgrade # Ensure shop_upgrade is accessible
@@ -41,17 +41,17 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
     # Initialisation du gestionnaire de dégâts
     damage_manager = DamageNumberManager()
 
-    # Reset upgrade levels at the start of a new game
+    # upgrades à 0
     for upgrade in shop_upgrade:
         upgrade['niveau'] = 1 # Reset level to 1
 
-    # Initialiser running
+    # initialisation de running
     running = True
 
     # Initialisation du serveur/client
     is_server = p2p and p2p.est_serveur if p2p else True
 
-    # Créer les vaisseaux avec leurs skins respectifs
+    # Initialisation des vaisseau
     local_ship = None  # Vaisseau local (celui que contrôle ce joueur)
     remote_ship = None  # Vaisseau distant (celui que contrôle l'autre joueur)
 
@@ -114,16 +114,16 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
     wave_in_progress = False # Initialize flag
 
     # Configurer les ennemis pour le multijoueur et set initial wave_in_progress for host
-    if is_server or not p2p: # If host or mode solo
+    if is_server or not p2p: # hôte ou mode solo
         if len(enemies) > 0:
-            wave_in_progress = True # Wave 1 is starting
-        if p2p: # If host in multijoueur, configure enemies for p2p
+            wave_in_progress = True # vague en cours
+        if p2p: # hôte
              for enemy in enemies:
                  enemy.p2p_comm = p2p
                  if isinstance(enemy, (ShooterEnemy, LinkEnemy, Tank_Boss, Dash_Boss, Laser_Boss, Mothership_Boss)) and remote_ship:
                      enemy.second_player = remote_ship
-    # Client will set wave_in_progress = True when receiving first enemy state
 
+    #variables 
     wave_number = 1
     score = 0
     font = pygame.font.Font(None, 36)
@@ -131,10 +131,10 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
 
     # Variables réseau
     last_network_update = 0
-    network_update_rate = 1/30  # Réduit de 60FPS à 30FPS pour de meilleures performances
+    network_update_rate = 1/30  # 30FPS pour de meilleures performances
     game_over_sent = False
 
-    # Utiliser une file d'attente thread-safe pour la communication réseau
+    # file d'attente thread-safe pour la communication réseau
     network_queue = Queue() if p2p else None
 
     # Fonction pour recevoir les données réseau dans un thread séparé
@@ -185,15 +185,15 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                     remote_bullets_data = msg.get('bullets', []) # Bullets from the other player
 
                     if remote_player_data and remote_ship:
-                        # Update remote ship's controllable state
+                        #update l'etat de romote_ship
                         remote_ship.rect.centerx = remote_player_data.get('x', remote_ship.rect.centerx)
                         remote_ship.rect.centery = remote_player_data.get('y', remote_ship.rect.centery)
                         remote_ship.angle = (remote_player_data.get('angle', remote_ship.angle)) % 360  # Correction de la rotation pour le multijoueur
                         remote_ship.forcefield_damage = remote_player_data.get('forcefield_damage', remote_ship.forcefield_damage)
                         remote_ship.last_forcefield_time = remote_player_data.get('last_forcefield_time', remote_ship.last_forcefield_time)
 
-                        # If THIS is the server, update remote_ship (P2) health/status ONLY from damage_update or direct collision, NOT 'state'
-                        # If THIS is the client, update remote_ship (P1) health/status from server's 'state' message
+                        # si serveur, update les vies de remote_ship (P2) mais que de damage_update ou collisions
+                        # si client, update les vies de remote_ship (P1) mais que des messages 'state'
 
                         if not is_server:
                             remote_ship.health = remote_player_data.get('health', remote_ship.health)
@@ -204,7 +204,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                             remote_ship.forcefield_damage = remote_player_data.get('forcefield_damage', remote_ship.forcefield_damage)
                             remote_ship.last_forcefield_time = remote_player_data.get('last_forcefield_time', remote_ship.last_forcefield_time)
 
-                        # Update remote ship appearance
+                        # update l'image de remote_ship
                         remote_ship.image = pygame.transform.rotate(remote_ship.original_image, remote_ship.angle)
                         remote_ship.rect = remote_ship.image.get_rect(center=remote_ship.rect.center)
 
@@ -256,29 +256,27 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                         # Remplacer la liste des balles par les balles mises à jour
                         remote_ship.bullets = updated_bullets
 
-                    # Le client reçoit l'état des ennemis et SON PROPRE état (santé/status) du serveur
+                    # Le client reçoit l'état des ennemis et son propre état (santé/status) du serveur
                     if not is_server:
                         # Update Enemies
                         server_enemies_data = msg.get('enemies', [])
-                        # Simple approach: replace enemies list entirely
-                        # More complex: could try to match by ID and update existing ones
+                        # remplace la liste d'enemis entiere
                         enemies.clear()
                         for enemy_data in server_enemies_data:
                             enemy = create_enemy_from_data(enemy_data)
-                            if enemy:
-                                # Pass player references for collision/targeting (remote is P1, local is P2)
+                            if enemy
                                 enemy.p2p_comm = p2p
-                                enemy.second_player = local_ship # The client's ship
+                                enemy.second_player = local_ship # vaisseau client
                                 enemies.append(enemy)
 
-                        # Set wave in progress flag for client if enemies received
+                        # wave_in_progress flag pour le client
                         if not wave_in_progress and len(enemies) > 0:
                             wave_in_progress = True
 
                         # Update Wave Number
                         wave_number = msg.get('wave', wave_number)
 
-                        # Update Client's OWN state (health, stun, etc.) based on server's player2 data
+                        # Update l'etat du client
                         player2_data = msg.get('player2')
                         if player2_data and local_ship:
                             local_ship.angle = (player2_data.get('angle', local_ship.angle) - 90) % 360  # Correction de la rotation pour le multijoueur
@@ -949,7 +947,6 @@ class Shop:
         self.current_screen = "menu"
         self.current_tab = "skins"
         self.credits, self.selected_skin, unlocked_skins = load_data()  # Charger les crédits, le skin sélectionné et les skins débloqués
-        self.pub_used = False
         self.entering_ip = False
         self.connexion_reussie = False
         self.p2p = None
@@ -982,7 +979,7 @@ class Shop:
             {"name": "Cristal Ship", "price": 100, "unlocked": False, "couleur_vaisseau": (20, 25, 35),"description":"tanky ship"},
             {"name": "Amethyst Ship", "price": 300, "unlocked": False, "couleur_vaisseau": (75,0,75),"description":"fast ship"},
             {"name": "Plasma Ship", "price": 250, "unlocked": False, "couleur_vaisseau": (125, 25, 125),"description":"railgun ship"},
-            {"name": "Emerald Ship", "price": "PUB","unlocked":False,"couleur_vaisseau": (0,45,0),"description":"bullet bounces"},
+            {"name": "Emerald Ship", "price": "325","unlocked":False,"couleur_vaisseau": (0,45,0),"description":"bullet bounces"},
             {"name": "Diamond Ship", "price": 400, "unlocked": False, "couleur_vaisseau": (0,45,45),"description":"explosions"}]
         
 
@@ -1063,8 +1060,8 @@ class Shop:
             button_text = "ÉQUIPED" if self.selected_skin == skin else "SELECT"
             button_color = GREEN if self.selected_skin == skin else BLUE
         else:
-            button_text = "LOOK AT ADVERTISING" if skin["price"] == "PUB" else f"{skin['price']} Credits"
-            button_color = RED if self.credits < (skin["price"] if isinstance(skin["price"], int) else 0) else YELLOW
+            button_text = f"{skin['price']} Credits"
+            button_color = RED if self.credits < skin["price"] else YELLOW
 
         button_rect = pygame.Rect(x + 10, y + self.card_height - 40, self.card_width - 20, 30)
         pygame.draw.rect(surface, button_color, button_rect, border_radius=5)
@@ -1074,10 +1071,7 @@ class Shop:
 
     def handle_skin_selection(self, skin):
         if not skin["unlocked"]:
-            if skin["price"] == "PUB" and not self.pub_used:
-                self.pub_used = True
-                skin["unlocked"] = True
-            elif isinstance(skin["price"], int) and self.credits >= skin["price"]:
+            if isinstance(skin["price"], int) and self.credits >= skin["price"]:
                 self.credits -= skin["price"]
                 skin["unlocked"] = True
             else:
