@@ -321,7 +321,7 @@ def creer_vaisseau(skin_info, damage_manager):
     if isinstance(skin_info, str):
         skin_name = skin_info
     elif isinstance(skin_info, dict):
-        skin_name = skin_info.get('name', 'Vaisseau Basique')
+        skin_name = skin_info.get('name', 'Basic Ship')
     else:
         # Type inconnu, utiliser le vaisseau par défaut
         return Ship(damage_manager=damage_manager)
@@ -336,7 +336,7 @@ def creer_vaisseau(skin_info, damage_manager):
     }
 
     # Modifier les paramètres selon le type de vaisseau
-    if skin_name == "Vaisseau Cristal":
+    if skin_name == "Cristal Ship":
         ship_params.update({
             'image_path': 'images/vaisseau_joueur_cristal.png',
             'ship_health': 200,
@@ -346,7 +346,7 @@ def creer_vaisseau(skin_info, damage_manager):
             'ship_bullet_size': 7,
             'ship_bullet_speed': 7
         })
-    elif skin_name == "Vaisseau Améthyste":
+    elif skin_name == "Amethyst Ship":
         ship_params.update({
             'image_path': 'images/vaisseau_joueur_amethyste.png',
             'ship_health': 80,
@@ -354,7 +354,7 @@ def creer_vaisseau(skin_info, damage_manager):
             'ship_speed': 6.5,
             'ship_bullet_speed': 10
         })
-    elif skin_name == "Vaisseau Plasma":
+    elif skin_name == "Plasma Ship":
         ship_params.update({
             'image_path': 'images/vaisseau_joueur_plasma.png',
             'ship_bullet_piercing': 3,
@@ -364,7 +364,7 @@ def creer_vaisseau(skin_info, damage_manager):
             'ship_reload_speed': 0.5,
             'ship_bullet_speed':10
         })
-    elif skin_name == "Vaisseau Emeraude":
+    elif skin_name == "Emerald Ship":
         ship_params.update({
             'image_path': 'images/vaisseau_joueur_emeraude.png',
             'ship_health': 80,
@@ -372,7 +372,7 @@ def creer_vaisseau(skin_info, damage_manager):
             'ship_range': 2500,
             'ship_speed': 4.6
         })
-    elif skin_name == "Vaisseau Diamant":
+    elif skin_name == "Diamond Ship":
         ship_params.update({
             'image_path': 'images/vaisseau_joueur_diamant.png',
             'ship_health': 200,
