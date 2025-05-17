@@ -4,7 +4,7 @@ import threading
 import time
 from queue import Queue
 import socket
-import cv2        (pip install opencv-python)
+import cv2 # (pip install opencv-python)
 import numpy as np
 
 from player import Ship, creer_vaisseau, Bullet
@@ -264,7 +264,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                         enemies.clear()
                         for enemy_data in server_enemies_data:
                             enemy = create_enemy_from_data(enemy_data)
-                            if enemy
+                            if enemy:
                                 enemy.p2p_comm = p2p
                                 enemy.second_player = local_ship # vaisseau client
                                 enemies.append(enemy)
