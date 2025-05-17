@@ -286,8 +286,8 @@ class Ship:
     # Si la touche '2' est enfoncée, activer l'invulnérabilité
         if keys[pygame.K_2] and self.invulnerability_available and not self.invulnerability_active and self.invulnerability_cooldown == 0:
             self.invulnerability_active = True # Active l'invulnérabilité
-            self.invincible_time = 2000  # 2 secondes de durée
-            self.invulnerability_timer = current_time + 2000
+            self.invincible_time = 10000  # 10 secondes de durée
+            self.invulnerability_timer = current_time + 10000
             self.invulnerability_cooldown = 20000   # 20 secondes de recharge
         # Si la touche '3' est enfoncée, activer les tirs chargés
         if keys[pygame.K_3] and self.charged_shots_available and self.charged_shots_cooldown == 0:
@@ -430,7 +430,8 @@ class Bullet:
         # Faire pivoter l'image du projectile en fonction de l'angle
 
         self.rotated_image= pygame.transform.rotate(self.image,math.degrees(self.angle))
-        window.blit(self.rotated_image, (self.x, self.y))   # Afficher l'image du projectile à sa position (x, y
+        window.blit(self.rotated_image, (self.x, self.y))   # Afficher l'image du projectile à sa position (x, y)
+        pygame.draw.circle(window, (255, 0, 0), (int(self.x), int(self.y)), self.radius)
         
 
     def explode(self, enemies, damage_manager=None):
@@ -446,6 +447,8 @@ class Bullet:
                     distance = math.hypot(self.x - enemy.x, self.y - enemy.y)
                     if distance <= self.explosion_radius:
                         enemy.health -= self.damage * 0.5  # Dégâts réduits pour l'explosion
+                        if damage_manager:
+                            damage_manager.add_damage_number(enemy.x, enemy.y - enemy.radius, self.damage * 0.5, getattr(self, 'is_critical', False))
 
             explosion_surface = pygame.Surface((self.explosion_radius * 2, self.explosion_radius * 2), pygame.SRCALPHA)
 
