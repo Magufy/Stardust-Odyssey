@@ -288,14 +288,6 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                             local_ship.last_forcefield_time = player2_data.get('last_forcefield_time', local_ship.last_forcefield_time)
 
 
-                elif msg_type == 'upgrade_choice':
-                    # Appliquer l'amélioration choisie par l'hôte (Client receives this)
-                    # This message is now primarily processed inside shop_upgrades's waiting loop
-                    # However, we might need a fallback here if the message arrives *before*
-                    # the client enters the shop_upgrades function (less likely with new logic).
-                    # For now, let shop_upgrades handle it primarily.
-                    pass # Or log if received unexpectedly outside shop_upgrades
-
                 elif msg_type == 'damage_update':
                     # Mise à jour spécifique pour la santé du joueur 2 (côté client) ou joueur 1 (côté serveur)
                     if not is_server and local_ship: # Client updates local ship (P2)
@@ -311,10 +303,10 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                     # Le client reçoit l'information sur la musique à jouer
                     music_type = msg.get('music_type')
                     if music_type:
-                        # Arrêter toute musique en cours
+                        # Arrête la musique en cours
                         pygame.mixer.stop()
                         
-                        # Jouer la musique appropriée
+                        # Jouer la musique appropriée à la fenetre
                         if music_type == 'boss_final':
                             son_boss_final = pygame.mixer.Sound("sons/boss_final.mp3")
                             son_boss_final.set_volume(0.4)  # Volume à 40%
@@ -327,42 +319,37 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                             son_vague = pygame.mixer.Sound("sons/vague.mp3")
                             son_vague.set_volume(0.3)  # Volume à 30%
                             son_vague.play(loops=-1)  # -1 signifie boucle infinie
-                    elif is_server and remote_ship: # Server updates remote ship (P1 from Client's view)
+                    elif is_server and remote_ship: # update du serveur de remote ship (P1 de la vue du client)
                         remote_ship.health = msg.get('player1_health', remote_ship.health)
                         remote_ship.invincible_time = msg.get('player1_invincible_time', remote_ship.invincible_time)
                         remote_ship.regen_rate = msg.get('player1_regen_rate', remote_ship.regen_rate)
                         remote_ship.max_health = msg.get('player1_max_health', remote_ship.max_health)
-                        remote_ship.stun_timer = msg.get('player1_stun_timer', remote_ship.stun_timer) # MAJ Stun
+                        remote_ship.stun_timer = msg.get('player1_stun_timer', remote_ship.stun_timer)
                         remote_ship.forcefield_damage = msg.get('player1_forcefield_damage', remote_ship.forcefield_damage)
                         remote_ship.last_forcefield_time = msg.get('player1_last_forcefield_time', remote_ship.last_forcefield_time)
 
                 elif msg_type == 'game_over':
                     running = False
                     show_game_over(score)
-                    break # Exit message processing loop
+                    break # sort de la boucle des msg_type
 
                 elif msg_type == 'start_upgrade_phase':
-                    # Client receives signal from server to enter the upgrade shop/waiting phase
+                    # le client recoit le signal d'entrée dans le shop
                     if not is_server:
                         print("[DEBUG] Client: Received start_upgrade_phase, entering shop_upgrades (waiting state).")
-                        # Ensure enemies are visually cleared before showing wait screen
-                        enemies.clear() # Clear client-side enemy list
-                        window.fill(BLACK) # Optional: Force clear background
-                        pygame.display.flip() # Update display to show cleared field briefly if needed
+                        enemies.clear() # Clear les enemis
+                        window.fill(BLACK) # clear le fond
+                        pygame.display.flip() # Update l'affichage
 
-                        # Call shop_upgrades, which will put the client in the waiting loop
+                        # Call shop_upgrades, qui va mettre le joueur 2 dans la boucle d'attente
                         upgrade_result = shop_upgrades(local_ship, p2p, remote_ship, network_queue)
 
-                        if not upgrade_result: # If shop quit early (e.g., window closed)
+                        if not upgrade_result: # par exemple, si l'hote quitte le jeu
                             running = False
-                            # No need to send game_over, client quitting is local
-                        else:
-                            # After client receives upgrade_choice and shop_upgrades returns True:
-                            print("[DEBUG] Client: Exited shop_upgrades after receiving choice.")
-                            # Client needs wave number updated potentially (handled by 'state' msg)
-                            wave_text_timer = 120 # Client can show wave text too
-                            # Client waits for server to send new enemy states.
-                            wave_in_progress = False # Client assumes wave not in progress until enemies arrive
+                            # affiche le game over au 2eme joueur
+                        else
+                            wave_text_timer = 120 # affichage de la 
+                            wave_in_progress = False # temps qu'il n'y a pas d'enemis
 
 
         # Vérifier si les joueurs sont morts
@@ -373,7 +360,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                 game_over_sent = True
             running = False
             show_game_over(score)
-            break # Exit main game loop
+            break # arrete game loop
 
         # Mise à jour des mouvements
         if running:
@@ -402,9 +389,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                     'angle': (local_ship.angle + 90) % 360,  # Correction de la rotation pour le multijoueur
                     'forcefield_damage': local_ship.forcefield_damage,
                     'last_forcefield_time': local_ship.last_forcefield_time,
-                    # Health/Status only sent BY server about the player it controls (P1)
-                    # OR BY server about its view of P2 (in the dedicated 'player2' field)
-                    # Client NEVER sends its own health/status derived locally.
+                    # le serveur envoi ses info au client
                 },
                 # Envoyer les informations des balles pour que l'autre joueur puisse les voir
                 'bullets': [{
@@ -418,7 +403,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
 
             # Le serveur envoie aussi l'état des ennemis et du joueur 2
             if is_server:
-                # --- Server adds its view of Player 1 state ---
+                # le serveur envoi les info de P1
                 player_state['player']['health'] = local_ship.health
                 player_state['player']['invincible_time'] = local_ship.invincible_time
                 player_state['player']['regen_rate'] = local_ship.regen_rate
@@ -427,7 +412,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                 player_state['player']['forcefield_damage'] = local_ship.forcefield_damage
                 player_state['player']['last_forcefield_time'] = local_ship.last_forcefield_time
 
-                # --- Enemy State ---
+                # etat des enemis
                 enemies_data = []
                 for e in enemies:
                     enemy_state = {
@@ -440,23 +425,22 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                         'stationary_timer': getattr(e, 'stationary_timer', None),
                     }
 
-                    # Add LinkEnemy active lasers
+                    # lasers actifs des linkenemies
                     if isinstance(e, LinkEnemy):
                         enemy_state['active_lasers'] = e.active_lasers
 
-                    # Add projectiles for any enemy class that has them
-                    if hasattr(e, 'projectiles'):
-                        # Make sure projectiles are serializable (basic dicts)
+                    # projectiles enemis
+                    if hasattr(e, 'projectiles'): #verifie si l'attribut projectiles est present chez e (enemy)
+                        # rend les projectiles serialisables
                         serializable_projectiles = []
                         if isinstance(e.projectiles, list):
                            for proj in e.projectiles:
                                if isinstance(proj, dict):
                                    serializable_projectiles.append(proj)
-                               # else: log warning or ignore non-dict projectile
                         enemy_state['projectiles'] = serializable_projectiles
 
 
-                    # Add boss-specific attributes if present
+                    # attributs de boss
                     if hasattr(e, 'maxhealth'):
                         enemy_state['maxhealth'] = e.maxhealth
 
@@ -477,31 +461,26 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
 
                     enemies_data.append(enemy_state)
 
-                # --- Player 2 State (Remote from Server's perspective) ---
+                # etat du P2
                 player2_state = {}
                 if remote_ship:
                     player2_state = {
-                        # Position/Angle not strictly needed if client sends them, but can be included
-                        # 'x': remote_ship.rect.centerx,
-                        # 'y': remote_ship.rect.centery,
-                        # 'angle': remote_ship.angle,
-                        'health': remote_ship.health, # Server sends its view of P2 health
+                        'health': remote_ship.health, # vies de P2
                         'invincible_time': remote_ship.invincible_time,
                         'regen_rate': remote_ship.regen_rate,
                         'max_health': remote_ship.max_health,
                         'stun_timer': remote_ship.stun_timer, # Add stun timer
                         'forcefield_damage': remote_ship.forcefield_damage,
                         'last_forcefield_time': remote_ship.last_forcefield_time,
-                        # Bullets for P2 are sent BY the client, server doesn't need to relay them
+                        # balles evoyées par le client, pas besoin du serveur
                     }
 
                 player_state.update({
                     'enemies': enemies_data,
                     'wave': wave_number,
-                    'player2': player2_state # Add player 2 state determined by server
+                    'player2': player2_state # etat du P2 vue du serv
                 })
-            # --- Client only sends its controllable state (pos, angle, bullets) ---
-            # (No changes needed here, already correct)
+            # le client envoie ses infos(pos, angle, bullets)
 
             p2p.envoyer_donnees(player_state)
             last_network_update = current_time
@@ -525,11 +504,10 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                     target_player = local_ship if dist1 < dist2 else remote_ship
 
                     # Configurer les ennemis pour qu'ils puissent accéder aux deux joueurs
-                    # Ensure second_player and p2p_comm are set correctly
                     if isinstance(enemy, (ShooterEnemy, LinkEnemy, Tank_Boss, Dash_Boss, Laser_Boss, Mothership_Boss)):
                         enemy.second_player = remote_ship if target_player == local_ship else local_ship
                     if p2p:
-                        enemy.p2p_comm = p2p # Make sure all enemies have access if needed
+                        enemy.p2p_comm = p2p
 
                 if enemy.type == [Mothership_Boss] or enemy.type == [LinkEnemy]:
                     enemy.update(target_player,enemies)
@@ -540,14 +518,12 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                 collision_p1 = enemy.check_collision(local_ship)
                 if collision_p1:
                     local_ship.health = max(0, local_ship.health)
-                    # Server doesn't need to send specific damage update for P1
-                    # Its state update will reflect the new health
 
                 if remote_ship:
                     collision_p2 = enemy.check_collision(remote_ship)
                     if collision_p2:
                         remote_ship.health = max(0, remote_ship.health)
-                        # Server detected collision with P2, send immediate update
+                        # detection des collision par le serveur
                         if is_server and p2p:
                             p2p.envoyer_donnees({
                                 'type': 'damage_update',
@@ -571,12 +547,11 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
         if remote_ship:
             remote_ship.draw(window)
 
-        # Draw enemies only if wave is in progress or not multijoueur client waiting
-        # (Client clears enemies when receiving start_upgrade_phase)
+        # fait les enemis seulement si la vague est en cours
         if wave_in_progress or (p2p and is_server):
              for enemy in enemies:
                  enemy.draw(window)
-        elif not p2p: # mode solo always draws enemies
+        elif not p2p: # mode solo fait toujours enemy.draw
              for enemy in enemies:
                  enemy.draw(window)
 
@@ -599,7 +574,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
         if wave_text_timer > 0:
             wave_text_timer -= 1
 
-        # --- Wave End and Upgrade Logic ---
+        # logique de fin de vague
         # Server is the authority on when the wave is truly cleared.
         if running and (is_server or not p2p) and len(enemies) == 0 and wave_in_progress:
             # This block is now primarily for the server or mode solo
