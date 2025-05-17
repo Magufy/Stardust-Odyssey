@@ -27,7 +27,7 @@ class Enemy:
         self.color = WHITE
         self.image = None
         self.damage_numbers = []
-        self.damage_font = pygame.font.Font(None, 120)  # Police énorme
+        self.damage_font = pygame.font.Font(None, 120)  # Police
 
         edge = random.choice(["top", "bottom", "left", "right"])
         margin = 50
@@ -57,12 +57,12 @@ class Enemy:
             rect = self.image.get_rect(center=(int(self.x), int(self.y)))
             window.blit(self.image, rect)
         
-        # Draw health bar for bosses
+        # Dessiner la barre de santé pour les boss
         if hasattr(self, 'healthbar') and self.healthbar and hasattr(self, 'maxhealth'):
             health_ratio = 0
             if self.maxhealth > 0:
                 health_ratio = self.health / self.maxhealth
-            else: # Handle case where maxhealth might not be set correctly
+            else: # Gestion des cas où la santé maximale peut ne pas être définie correctement
                 health_ratio = 0 if self.health <= 0 else 1
 
             bar_width = 600
@@ -71,19 +71,19 @@ class Enemy:
             bar_y = 20
             bar_height = 20
 
-            # Draw the background bar
+            # Dessiner la barre d'arrière-plan
             pygame.draw.rect(window, GRAY, (bar_x, bar_y, bar_width, bar_height))
-            # Draw the health portion
+            # Dessiner le volet santé
             pygame.draw.rect(window, RED, (bar_x, bar_y, current_bar_width, bar_height))
-            # Draw the border
+            # Dessiner la bordure
             pygame.draw.rect(window, WHITE, (bar_x, bar_y, bar_width, bar_height), 2)
 
-            # Draw boss name if available
+            # Dessiner le nom du patron si disponible
             if hasattr(self, 'bossname'):
                 font = pygame.font.Font(None,36)
                 self.font = pygame.font.Font(None, 36)
                 bosstag = font.render(self.bossname, True, WHITE)
-                # Center the boss name text above the health bar
+                # Centrer le texte du nom du boss au-dessus de la barre de santé
                 tag_rect = bosstag.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
                 window.blit(bosstag, tag_rect)
         
@@ -135,16 +135,16 @@ class Enemy:
         print(f"Nombre ajouté: {damage} à ({x}, {y})")
 
 
-        # Draw health bar for bosses
-        # Ensure 'enemies' list is accessible if needed here, or pass necessary info
-        # Using hasattr check is safer than assuming global 'enemies' is always up-to-date/correct
-        if hasattr(self, 'healthbar') and self.healthbar and hasattr(self, 'maxhealth'): # Check for maxhealth too
+        # Dessiner la barre de santé pour les boss
+        # S'assurer que la liste des “ennemis” est accessible si nécessaire ici, ou passer les informations nécessaires
+        # Utiliser la vérification hasattr est plus sûr que de supposer que la liste globale des « ennemis » est toujours à jour/correcte.
+        if hasattr(self, 'healthbar') and self.healthbar and hasattr(self, 'maxhealth'): # Vérifier également l'existence de maxhealth
 
-            # Prevent division by zero if maxhealth is 0
+            # Empêcher la division par zéro si la santé maximale est 0
             health_ratio = 0
             if self.maxhealth > 0:
                 health_ratio = self.health / self.maxhealth
-            else: # Handle case where maxhealth might not be set correctly
+            else: # Gestion des cas où la santé maximale peut ne pas être définie correctement
                 health_ratio = 0 if self.health <= 0 else 1
 
             bar_width = 600
@@ -153,17 +153,17 @@ class Enemy:
             bar_y = 20
             bar_height = 20
 
-            # Draw the background bar
+            # Dessiner la barre d'arrière-plan
             pygame.draw.rect(window, GRAY, (bar_x, bar_y, bar_width, bar_height))
-            # Draw the health portion
+            # Dessiner le volet santé
             pygame.draw.rect(window, RED, (bar_x, bar_y, current_bar_width, bar_height))
-            # Draw the border
+            # Dessiner la bordure
             pygame.draw.rect(window, WHITE, (bar_x, bar_y, bar_width, bar_height), 2)
 
-            # Draw boss name if available
+            # Dessiner le nom du patron si disponible
             if hasattr(self, 'bossname'):
                 bosstag = font.render(self.bossname, True, WHITE)
-                # Center the boss name text above the health bar
+                # Centrer le texte du nom du boss au-dessus de la barre de santé
                 tag_rect = bosstag.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
                 window.blit(bosstag, tag_rect)
 
@@ -172,18 +172,18 @@ class Enemy:
             return False
 
         distance = math.hypot(player.rect.centerx - self.x, player.rect.centery - self.y)
-        if distance < self.radius + 20: # Use player radius (assuming 20)
+        if distance < self.radius + 20: # Utiliser le rayon du joueur (en supposant qu'il soit de 20)
             # degats - shield
             damage_to_player = self.damage * (1 - player.shield / 100)
             player.health -= damage_to_player
             son_degat=pygame.mixer.Sound("sons/degat_joueur.mp3")
             son_degat.play()
-            player.health = max(0, player.health) # Clamp health to minimum 0
+            player.health = max(0, player.health) # Santé de la pince au minimum 0
             player.invincible_time = 60
 
-            # Body damage logic if player has it
+            # Logique des dégâts corporels si le joueur en dispose
             if hasattr(player, 'body_damage') and player.body_damage > 0:
-                # Apply body damage to the enemy
+                # Appliquer des dommages corporels à l'ennemi
                 self.health -= player.body_damage
                 if hasattr(player, 'damage_manager') and player.damage_manager:
                     player.damage_manager.add_damage_number(self.x, self.y - self.radius, player.body_damage, False)
@@ -233,23 +233,23 @@ class BasicEnemy(Enemy):
         self.damage = 10
         self.color = RED
         self.type= [BasicEnemy]
-        self.angle = 0 # Initialize angle
+        self.angle = 0 # Initialiser l'angle
 
-        # Load image
-        image_path = 'images/enemi_rouge.png' # Make sure this path is correct
+        # charger l'image
+        image_path = 'images/enemi_rouge.png'
 
         loaded_image = pygame.image.load(image_path).convert_alpha()
         size = (self.radius * 2, self.radius * 2)
-        self.original_image = pygame.transform.scale(loaded_image, size) # Store original
-        self.image = self.original_image # Keep a reference if needed, but draw uses original
+        self.original_image = pygame.transform.scale(loaded_image, size) # Magasin original
+        self.image = self.original_image # Conservez une référence si nécessaire, mais dessinez des utilisations originales.
 
 
     def draw(self,window):
-        # Rotate the original image for drawing
-        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Adjust angle as needed
+        # Rotation de l'image originale pour le dessin
+        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Ajuster l'angle selon les besoins
         new_rect = rotated_image.get_rect(center=(int(self.x), int(self.y)))
         window.blit(rotated_image, new_rect)
-        # Do not call super().draw() as we handle drawing here
+        # Ne pas appeler super().draw() car nous nous occupons du dessin ici
 
     def move_towards(self, player):
         dx = player.rect.centerx - self.x
@@ -269,7 +269,7 @@ class BasicEnemy(Enemy):
         # Calcul l' angle 
         dx = player.rect.centerx - self.x
         dy = player.rect.centery - self.y
-        # Update self.angle, used by draw method
+        # Mise à jour de self.angle, utilisé par la méthode draw
         self.angle = math.degrees(math.atan2(-dy, dx))
 
 
@@ -283,19 +283,19 @@ class TankEnemy(Enemy):
         self.damage = 20
         self.color = YELLOW
         self.type= [TankEnemy]
-        self.angle = 0 # Initialize angle
+        self.angle = 0 # Initialiser angle
 
-        # Load image
-        image_path = 'images/enemi_jaune.png' # Make sure this path is correct
+        # charger image
+        image_path = 'images/enemi_jaune.png'
         try:
             loaded_image = pygame.image.load(image_path).convert_alpha()
             size = (self.radius * 2, self.radius * 2)
-            self.original_image = pygame.transform.scale(loaded_image, size) # Store original
-            self.image = self.original_image # Keep reference if needed
+            self.original_image = pygame.transform.scale(loaded_image, size) # Magasin original
+            self.image = self.original_image # Conserver la référence en cas de besoin
         except pygame.error as e:
             print(f"Error loading image {image_path}: {e}")
             self.original_image = pygame.Surface((self.radius*2, self.radius*2)); self.original_image.fill(self.color)
-            self.image = self.original_image # Keep reference
+            self.image = self.original_image # Conserver la référence
 
     def move_towards(self, player):
         dx = player.rect.centerx - self.x
@@ -311,18 +311,18 @@ class TankEnemy(Enemy):
 
     def update(self, player):
         self.move_towards(player)
-        # Calculate angle in update
+        # Calculer l'angle dans la mise à jour
         dx = player.rect.centerx - self.x
         dy = player.rect.centery - self.y
-        # Update self.angle, used by draw method
+        # Mise à jour de self.angle, utilisé par la méthode draw
         self.angle = math.degrees(math.atan2(-dy, dx))
 
     def draw(self,window):
-        # Rotate the original image for drawing
-        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Adjust angle offset if needed
+        # Faire pivoter l'image originale pour dessiner
+        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Ajustez l'offset d'angle si nécessaire
         new_rect = rotated_image.get_rect(center=(int(self.x), int(self.y)))
         window.blit(rotated_image, new_rect)
-        # Do not call super().draw()
+        # Ne pas appeler super().draw()
 
 class ShooterEnemy(Enemy):
     def __init__(self):
@@ -333,7 +333,7 @@ class ShooterEnemy(Enemy):
         self.damage = 15
         self.color = GREEN
         self.type= [ShooterEnemy]
-        self.angle = 0 # Initialize angle
+        self.angle = 0 # Initialiser l'angle
 
         self.shoot_cooldown = 0
         self.shoot_delay = random.randint(60, 120)
@@ -346,18 +346,18 @@ class ShooterEnemy(Enemy):
         self.is_moving = True
         self.pick_new_position()
 
-        # Load image
+        # Charger image
         image_path = 'images/enemi_vert.png'
 
         loaded_image = pygame.image.load(image_path).convert_alpha()
         size = (self.radius * 2, self.radius * 2)
-        self.original_image = pygame.transform.scale(loaded_image, size) # Store original
-        self.image = self.original_image # Keep reference
+        self.original_image = pygame.transform.scale(loaded_image, size) # Magasin original
+        self.image = self.original_image # Conservez la référence
 
         loaded_proj_image = pygame.image.load('images/projectile_enemi.png').convert_alpha()
         size = ( 50, 20)
-        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Store original
-        self.proj_image = self.original_proj_image # Keep reference
+        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Magasin original
+        self.proj_image = self.original_proj_image # Conservez la référence
 
 
 
@@ -372,7 +372,7 @@ class ShooterEnemy(Enemy):
             dy = self.target_y - self.y
             distance = math.hypot(dx, dy)
 
-            # Calculate angle towards movement target
+            # Calculer l'angle vers la cible de mouvement
             if distance > 0:
                 self.angle = math.degrees(math.atan2(-dy, dx))
 
@@ -386,7 +386,7 @@ class ShooterEnemy(Enemy):
                 self.y += (dy / distance) * self.speed
 
         else:
-            # Calculate angle towards player only when stationary
+            # Calculer l'angle vers le joueur uniquement lorsqu'il est stationnaire
             dx_player = player.rect.centerx - self.x
             dy_player = player.rect.centery - self.y
             self.angle = math.degrees(math.atan2(-dy_player, dx_player))
@@ -396,45 +396,45 @@ class ShooterEnemy(Enemy):
                 self.is_moving = True
                 self.pick_new_position()
             else:
-                # Only shoot when stationary
+                # Ne tirer que lorsque vous êtes stationnaire.
                 self.shoot_cooldown = max(0, self.shoot_cooldown - 1)
                 if self.shoot_cooldown == 0:
-                    # Use the pre-calculated angle (towards player)
+                    # Utilisez l'angle pré-calculé (vers le joueur)
                     self.projectiles.append({
                         'x': self.x,
                         'y': self.y,
-                        'angle': math.radians(self.angle), # Use the calculated angle
+                        'angle': math.radians(self.angle), # Utilisez l'angle calculé
                         'speed': 5,
                         'radius': 5
                     })
                     self.shoot_cooldown = self.shoot_delay
 
-        # Update projectiles
+        # Mettre à jour les projectiles
         for proj in self.projectiles[:]:
             proj['x'] += proj['speed'] * math.cos(proj['angle'])
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
 
-            # Remove if off screen
+            # Retirer si hors écran
             if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
                 proj['y'] < -50 or proj['y'] > HEIGHT + 50):
-                if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
+                if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
                 continue
 
-            # Check collision with player
+            # Vérifier la collision avec le joueur
             if not player.invincible_time > 0:
                 dist = math.hypot(player.rect.centerx - proj['x'],
                                 player.rect.centery - proj['y'])
-                if dist < proj['radius'] + 20: # Use player radius (assuming 20)
+                if dist < proj['radius'] + 20: # Utiliser le rayon du joueur (en supposant 20)
                     damage = self.damage * (1 - player.shield / 100)
                     player.health -= damage
                     son_degat=pygame.mixer.Sound("sons/degat_joueur.mp3")
                     son_degat.play()
-                    player.health = max(0, player.health) # Clamp health to minimum 0
+                    player.health = max(0, player.health) # Limiter la santé à un minimum de 0
                     player.invincible_time = 60
-                    if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
-                    continue # Skip second player check if removed
+                    if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
+                    continue # Ignorer la vérification du deuxième joueur s'il est supprimé
 
-            # Si nous sommes dans le jeu en multijoueur, on vérifie aussi une collision avec l'autre joueur
+            # If we are in multiplayer mode, we also check for a collision with the other player.
             if hasattr(self, 'second_player') and self.second_player and not self.second_player.invincible_time > 0:
                 dist = math.hypot(self.second_player.rect.centerx - proj['x'],
                                self.second_player.rect.centery - proj['y'])
