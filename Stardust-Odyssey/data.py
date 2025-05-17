@@ -24,13 +24,13 @@ def load_data():
             default_data = {
                 "credits": 5000,  # Crédit de départ
                 "selected_skin": {
-                    "name": "Vaisseau Basique",
+                    "name": "Basic Ship",
                     "price": "gratuit",
                     "unlocked": True,
                     "couleur_vaisseau": BLUE
                 },
                 "skins": [{
-                    "name": "Vaisseau Basique",
+                    "name": "Basic Ship",
                     "price": "gratuit",
                     "unlocked": True,
                     "couleur_vaisseau": BLUE
@@ -71,13 +71,13 @@ def load_data():
                 default_data = {
                     "credits": 5000,
                     "selected_skin": {
-                        "name": "Vaisseau Basique",
+                        "name": "Basic Ship",
                         "price": "gratuit",
                         "unlocked": True,
                         "couleur_vaisseau": BLUE
                     },
                     "skins": [{
-                        "name": "Vaisseau Basique",
+                        "name": "Basic Ship",
                         "price": "gratuit",
                         "unlocked": True,
                         "couleur_vaisseau": BLUE
@@ -92,12 +92,12 @@ def load_data():
         print(f"Erreur lors du chargement des données: {e}")
         # Retourner les valeurs par défaut en cas d'erreur
         return 5000, {
-            "name": "Vaisseau Basique",
+            "name": "Basic Ship",
             "price": "gratuit",
             "unlocked": True,
             "couleur_vaisseau": BLUE
         }, [{
-            "name": "Vaisseau Basique",
+            "name": "Basic Ship",
             "price": "gratuit",
             "unlocked": True,
             "couleur_vaisseau": BLUE
