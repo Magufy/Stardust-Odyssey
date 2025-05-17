@@ -1001,7 +1001,7 @@ class Laser_Boss(Enemy):
                             )
                     self.shoot_cooldown = 240  #4sec
 
-        # Update projectiles
+        # Mettre à jour les projectiles
         for proj in self.projectiles[:]:
             proj['x'] += proj['speed'] * math.cos(proj['angle'])
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
@@ -1058,10 +1058,10 @@ class Laser_Boss(Enemy):
                 self.projectiles.remove(proj)
 
     def draw(self, window):
-        # Draw enemy
+        # Dessiner l'ennemi
         super().draw(window)
 
-        # Draw projectiles
+        # Dessiner des projectiles
         for proj in self.projectiles:
             new_rect = self.original_proj_image.get_rect(center=(int(proj['x']), int(proj['y'])))
             window.blit(self.original_proj_image, new_rect)
@@ -1078,9 +1078,9 @@ class Mothership_Boss(Enemy):
         self.color = (0,255,0)
         self.type= [Mothership_Boss]
         self.bossname= "MOTHERSHEEP"
-        self.angle = 0 # Initialize angle
+        self.angle = 0 # Initialiser angle
 
-        self.shoot_cooldown = 180  # 3 seconds initial cooldown
+        self.shoot_cooldown = 180  # 3 secondes de temps de recharge initial
         self.projectiles = []
 
         self.target_x = random.randint(200,WIDTH-200)
@@ -1088,26 +1088,26 @@ class Mothership_Boss(Enemy):
 
         self.healthbar=True
 
-        # Counters for spawning minions
-        self.spawn_cooldown = 600  # 10 seconds initial cooldown
+        # Compteurs pour invoquer des sbires
+        self.spawn_cooldown = 600  # 10 secondes de temps de recharge initial
 
         self.projectiletp=False
 
-        # Load image
+        # Charger image
         image_path = 'images/boss_final.png'
 
         loaded_image = pygame.image.load(image_path).convert_alpha()
         size = (self.radius * 2, self.radius * 2)
-        self.original_image = pygame.transform.scale(loaded_image, size) # Store original
-        self.image = self.original_image # Keep reference
+        self.original_image = pygame.transform.scale(loaded_image, size) # Magasin original
+        self.image = self.original_image # Prendre reference
 
         loaded_proj_image = pygame.image.load('images/projectile_boss2.png').convert_alpha()
         size = ( 80, 50)
-        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Store original
-        self.proj_image = self.original_proj_image # Keep reference
+        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Magasin original
+        self.proj_image = self.original_proj_image # Prendre reference
 
     def update(self, player,enemies):
-        # Calculate angle towards player first
+        # Calculez d'abord l'angle vers le joueur
         dx_player = player.rect.centerx - self.x
         dy_player = player.rect.centery - self.y
         self.angle = math.degrees(math.atan2(-dy_player, dx_player))
@@ -1121,24 +1121,24 @@ class Mothership_Boss(Enemy):
             self.x += (dx / distance) * self.speed
             self.y += (dy / distance) * self.speed
         else:
-            # Possibly pick a new target position
-            if random.random() < 0.0015:  # 1% chance per frame
+            # Possiblement choisir une nouvelle position cible
+            if random.random() < 0.0015:  # 1 % de chance par image
                 self.target_x = random.randint(200, WIDTH-200)
                 self.target_y = random.randint(200, HEIGHT-200)
 
-            # Shooting logic
+            # Logique de tir
             self.shoot_cooldown = max(0, self.shoot_cooldown - 1)
 
-            # Spawn minions periodically
+            # Faites apparaître des sbires périodiquement
             self.spawn_cooldown = max(0, self.spawn_cooldown - 1)
 
-            # Shooting patterns based on health percentage
+            # Des schémas de tir basés sur le pourcentage de santé
             if self.shoot_cooldown == 0:
                 health_percent = self.health / self.maxhealth * 100
 
-                # Different attack patterns based on health
-                if health_percent < 20:  # Below 20% health - desperate mode
-                    # Rapid fire at player (use calculated angle)
+                # Différents schémas d'attaque en fonction de la santé
+                if health_percent < 20:  # Santé inférieure à 20 % - mode désespéré
+                    # Tirs rapides sur le joueur (utiliser un angle calculé)
                     self.projectiletp=False
                     self.projectiles.append({
                         'x': self.x,
@@ -1164,26 +1164,26 @@ class Mothership_Boss(Enemy):
                         'radius': 20,
                         'damage': 15
                     })
-                    self.shoot_cooldown = random.randint(40,60)  # Fast cooldown
+                    self.shoot_cooldown = random.randint(40,60)  # Récupération rapide
 
-                elif health_percent < 50:  # Below 50% health - aggressive mode
-                    # Spiral pattern
+                elif health_percent < 50:  # En dessous de 50% de santé - mode agressif
+                    # Motif en spirale
                     self.projectiletp=True
                     for i in range(12):
-                        # Spiral angle calculation needs careful review if it should target player
-                        # This current logic is purely time-based spiral, not player-targeted
+                        # Le calcul de l'angle de spirale nécessite une révision minutieuse s'il doit cibler le joueur
+                        # Cette logique actuelle est purement basée sur le temps, pas ciblée sur le joueur
                         spiral_angle = math.radians(i * 45 + (pygame.time.get_ticks() % 360))
                         self.projectiles.append({
                             'x': self.x,
                             'y': self.y,
                             'angle': spiral_angle,
                             'speed': 5,
-                            'radius': 20, # Increased radius
+                            'radius': 20, # Augmentation du rayon
                             'damage': 10
                         })
-                    self.shoot_cooldown = random.randint(180,240)  # gros cooldown, sinon bcp trop fort
+                    self.shoot_cooldown = random.randint(180,240)  # Il y a un gros cooldown, sinon c'est beaucoup trop fort.
 
-                elif health_percent < 75 : #phase aleatoire
+                elif health_percent < 75 : # phase aleatoire
                     self.projectiletp=not self.projectiletp #inverse a chaque tir
                     self.projectiles.append({
                             'x': self.x,
@@ -1195,25 +1195,25 @@ class Mothership_Boss(Enemy):
                         })
                     self.shoot_cooldown = random.randint(20,70)
 
-                else:  # Above 75% health - normal mode
-                    # Target player with slower, bigger shots (use calculated angle)
+                else:  # Au-dessus de 75% de santé - mode normal
+                    # Ciblez un joueur avec des coups plus lents et plus puissants (utilisez un angle calculé)
                     self.projectiletp=False
                     self.projectiles.append({
                         'x': self.x,
                         'y': self.y,
-                        'angle': math.radians(self.angle), # Use calculated angle
+                        'angle': math.radians(self.angle), # Utilisez l'angle calculé
                         'speed': 4,
                         'radius': 25,
                         'damage': 20
                     })
-                    self.shoot_cooldown = random.randint(40,120)  # Slow cooldown
+                    self.shoot_cooldown = random.randint(40,120)  # Ralentissement du temps de recharge
 
-            # Spawn minions when cooldown reaches 0 and health is below 70%
+            # Faites apparaître des sbires lorsque le temps de recharge atteint 0 et que la santé est inférieure à 70%
             if self.spawn_cooldown == 0 and (self.health / self.maxhealth) < 0.7:
                 self.spawn_minions(enemies)
-                self.spawn_cooldown = 480  # Reset cooldown to 8 seconds
+                self.spawn_cooldown = 480  # Réinitialiser le temps de recharge à 8 secondes
 
-        # Update projectiles
+        # Mettre à jour les projectiles
         for proj in self.projectiles[:]:
             proj['x'] += proj['speed'] * math.cos(proj['angle'])
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
@@ -1222,13 +1222,13 @@ class Mothership_Boss(Enemy):
             if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or proj['y'] < -50 or proj['y'] > HEIGHT + 50):
 
                 if self.projectiletp:
-                    # Bounce off screen edges
+                    # Rebondir sur les bords de l'écran
                     if proj['x'] <= 0: proj['x'] = WIDTH-5
                     if proj['x'] >= WIDTH: proj['x'] = 5
                     if proj['y'] <= 0: proj['y'] = HEIGHT-5
                     if proj['y'] >= HEIGHT: proj['y'] = 5
                 else:
-                    if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
+                    if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
 
             # collision au joueur en ignorant sa periode d'invincibilité
             dist = math.hypot(player.rect.centerx - proj['x'],
@@ -1238,7 +1238,7 @@ class Mothership_Boss(Enemy):
                 player.health -= damage
                 son_degat=pygame.mixer.Sound("sons/degat_joueur.mp3")
                 son_degat.play()
-                if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
+                if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
                 continue
 
             # Vérifier la collision avec le second joueur en multijoueur
@@ -1249,45 +1249,45 @@ class Mothership_Boss(Enemy):
                     damage = proj['damage'] * (1 - self.second_player.shield / 100)
                     self.second_player.health -= damage
                     self.second_player.health = max(0, self.second_player.health)
-                    if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
+                    if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
                     # Envoyer l'update au client (Server only)
                     if hasattr(self, 'p2p_comm') and self.p2p_comm and getattr(self.p2p_comm, 'est_serveur', False):
                         self.p2p_comm.envoyer_donnees({
                             'type': 'damage_update',
                             'player2_health': self.second_player.health,
-                            'player2_invincible_time': 60 # Mothership boss does not stun
+                            'player2_invincible_time': 60 # Le patron de la vaisseau-mère ne paralyse pas.
                         })
                     continue
 
-            # Fade out projectiles over time
+            # Faire disparaître les projectiles au fil du temps
             proj['radius'] -= 0.005
             if proj['radius'] < 10:
-                if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
+                if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
 
     def spawn_minions(self,enemies):
-        # Add 1-3 random enemies around the boss
+        # Ajoutez 1 à 3 ennemis aléatoires autour du boss.
 
         num_enemies = random.randint(1, 3)
         for _ in range(num_enemies):
-            # Choose a random enemy type
+            # Choisissez un type d'ennemi au hasard
             enemy_types = [BasicEnemy, ShooterEnemy, TankEnemy]
             enemy_class = random.choice(enemy_types)
             enemy = enemy_class()
 
-            # Position the enemy near the boss with a random offset
+            # Positionnez l'ennemi près du boss avec un décalage aléatoire.
             angle_rad = random.random() * math.pi * 2
-            distance = self.radius + enemy.radius + 20  # Ensure they don't overlap
+            distance = self.radius + enemy.radius + 20  # Assurez-vous qu'ils ne se chevauchent pas.
             enemy.x = self.x + math.cos(angle_rad) * distance
             enemy.y = self.y + math.sin(angle_rad) * distance
 
             enemies.append(enemy)
 
     def draw(self, window):
-        # Rotate the original image for drawing
-        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Adjust angle offset if needed
+        # Faire pivoter l'image originale pour dessiner
+        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Ajustez l'offset d'angle si nécessaire
         new_rect = rotated_image.get_rect(center=(int(self.x), int(self.y)))
         window.blit(rotated_image, new_rect)
-        # Draw health bar (logic copied from base class draw)
+        # Dessiner la barre de vie (logique copiée de la classe de base dessiner)
         if hasattr(self, 'healthbar') and self.healthbar and hasattr(self, 'maxhealth'):
             health_ratio = 0
             if self.maxhealth > 0: health_ratio = self.health / self.maxhealth
@@ -1303,9 +1303,9 @@ class Mothership_Boss(Enemy):
                 tag_rect = bosstag.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
                 window.blit(bosstag, tag_rect)
 
-        # Draw projectiles
+        # Dessiner des projectiles
         for proj in self.projectiles:
             angle = math.degrees(proj['angle'])
-            rotated_proj_image = pygame.transform.rotate(self.original_proj_image, angle) # Adjust angle offset if needed
+            rotated_proj_image = pygame.transform.rotate(self.original_proj_image, angle) # Ajustez l'offset d'angle si nécessaire
             new_rect = rotated_proj_image.get_rect(center=(int(proj['x']), int(proj['y'])))
             window.blit(rotated_proj_image, new_rect)
