@@ -434,7 +434,7 @@ class ShooterEnemy(Enemy):
                     if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
                     continue # Ignorer la vérification du deuxième joueur s'il est supprimé
 
-            # If we are in multiplayer mode, we also check for a collision with the other player.
+            # Si nous sommes en mode multijoueur, nous vérifions également s'il y a une collision avec l'autre joueur.
             if hasattr(self, 'second_player') and self.second_player and not self.second_player.invincible_time > 0:
                 dist = math.hypot(self.second_player.rect.centerx - proj['x'],
                                self.second_player.rect.centery - proj['y'])
@@ -443,20 +443,20 @@ class ShooterEnemy(Enemy):
                     self.second_player.health -= damage
                     self.second_player.health = max(0, self.second_player.health)
                     self.second_player.invincible_time = 60
-                    if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
-                    # NOTE: Network update call removed here as requested by user.
+                    if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
+                    # NOTE:L'appel de mise à jour du réseau a été supprimé ici comme demandé par l'utilisateur.
 
     def draw(self, window):
-        # Rotate the original image for drawing
-        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Adjust angle offset if needed
+        # Faire pivoter l'image originale pour dessiner
+        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Ajustez l'offset d'angle si nécessaire
         new_rect = rotated_image.get_rect(center=(int(self.x), int(self.y)))
         window.blit(rotated_image, new_rect)
-        # Do not call super().draw()
+        # Ne pas appeler super().draw()
 
-        # Draw projectiles
+        # Dessiner des projectiles
         for proj in self.projectiles:
             angle = math.degrees(proj['angle'])
-            rotated_proj_image = pygame.transform.rotate(self.original_proj_image, angle) # Adjust angle offset if needed
+            rotated_proj_image = pygame.transform.rotate(self.original_proj_image, angle) # Ajustez l'offset d'angle si nécessaire
             new_rect = rotated_proj_image.get_rect(center=(int(proj['x']), int(proj['y'])))
             window.blit(rotated_proj_image, new_rect)
 
@@ -470,7 +470,7 @@ class LinkEnemy(Enemy):
         self.color = WHITE
         self.type = [LinkEnemy]
 
-        # Attributs de mouvement
+        # Movement attributes
         self.target_x = 0
         self.target_y = 0
         self.is_moving = False
@@ -479,7 +479,7 @@ class LinkEnemy(Enemy):
         # Pour le stockage des lasers actifs (pour la détection de collision)
         self.active_lasers = []  # [{'start': (x1, y1), 'end': (x2, y2), 'damage': 20}, ...]
 
-        # Load image
+        # Charger image
         image_path = 'images/enemi_blanc.png'
         try:
             loaded_image = pygame.image.load(image_path).convert_alpha()
@@ -501,11 +501,11 @@ class LinkEnemy(Enemy):
             dy = self.target_y - self.y
             distance = math.hypot(dx, dy)
 
-            if distance > self.speed:  # Use speed threshold
+            if distance > self.speed:  # Utiliser le seuil de vitesse
                 self.x += (dx / distance) * self.speed
                 self.y += (dy / distance) * self.speed
             else:
-                self.x = self.target_x # Snap to target
+                self.x = self.target_x # Ajuster à la cible
                 self.y = self.target_y
                 self.is_moving = False
                 self.stationary_timer = random.randint(180, 300)  # 3-5 secondes
@@ -517,48 +517,48 @@ class LinkEnemy(Enemy):
 
         # Calculer les lasers actifs (Optimized)
         self.active_lasers = []
-        # Access the global enemies list (ensure it's accessible)
+        # Accédez à la liste des ennemis mondiaux (assurez-vous qu'elle soit accessible)
         for other_enemy in enemies:
-            # Check only against other LinkEnemy instances, avoid self-check
+            # Vérifiez uniquement par rapport à d'autres instances de LinkEnemy, évitez l'auto-vérification.
             if isinstance(other_enemy, LinkEnemy) and other_enemy != self:
                 distance = math.hypot(self.x - other_enemy.x, self.y - other_enemy.y)
                 if distance < 900:  # Distance maximale pour les lasers
                     alpha = max(0, min(255, int(255 * (1 - distance / 900))))
-                    # Store laser data for drawing and collision detection
+                    # Stocker les données laser pour le dessin et la détection de collision
                     self.active_lasers.append({
                         'start': (self.x, self.y),
                         'end': (other_enemy.x, other_enemy.y),
-                        'damage': self.damage * (alpha / 255), # Damage proportional to intensity
+                        'damage': self.damage * (alpha / 255), # Dommages proportionnels à l'intensité
                         'alpha': alpha
                     })
 
     def draw(self, window):
-        # Draw enemy body
+        # Dessinez le corps de l'ennemi
         super().draw(window)
 
         # Dessiner les lasers actifs (Optimized Drawing)
         for laser in self.active_lasers:
-            # Draw line directly on the window with alpha
-            # Note: pygame.draw.line doesn't directly support alpha.
-            # We might need a workaround or accept non-alpha lines for performance.
-            # Simple approach: Draw non-alpha line for now, adjust color intensity slightly.
+            # Dessinez une ligne directement sur la fenêtre avec alpha
+            # Remarque : pygame.draw.line ne prend pas directement en charge l'alpha.
+            # Nous pourrions avoir besoin d'une solution de contournement ou d'accepter des lignes sans alpha pour des performances.
+            # Approche simple : Dessinez une ligne sans alpha pour l'instant, ajustez légèrement l'intensité des couleurs.
             intensity_factor = laser['alpha'] / 255.0
             line_color = (
                 int(self.color[0] * intensity_factor),
                 int(self.color[1] * intensity_factor),
                 int(self.color[2] * intensity_factor)
             )
-            # Ensure color components are valid (0-255)
+            # Assurez-vous que les composants de couleur sont valides (0-255)
             line_color = tuple(max(0, min(255, c)) for c in line_color)
 
-            if laser['alpha'] > 20: # Only draw reasonably visible lasers
+            if laser['alpha'] > 20: # Dessinez seulement des lasers raisonnablement visibles.
                  pygame.draw.line(window, line_color, laser['start'], laser['end'], 3)
 
     def check_laser_collision(self, player):
         if player.invincible_time > 0:
             return False
 
-        # active_lasers list is now populated in the update method
+        # la liste des lasers actifs est maintenant peuplée dans la méthode de mise à jour
         for laser in self.active_lasers:
             # Algorithme de détection de collision entre une ligne et un cercle
             # Basé sur la distance du point le plus proche sur la ligne au centre du cercle
@@ -601,49 +601,49 @@ class LinkEnemy(Enemy):
 
             if distance < player_radius + laser_width/2:
                 damage = laser['damage'] * (1 - player.shield / 100)
-                # Ensure damage is at least a small amount if laser is visible
-                if laser['alpha'] > 20 and damage <= 0: damage = 1 # Minimum damage for visible laser hits
+                # Assurez-vous que les dommages soient d'au moins une petite quantité si le laser est visible.
+                if laser['alpha'] > 20 and damage <= 0: damage = 1 # Dommages minimum pour les impacts de laser visibles
 
-                if damage > 0: # Only apply damage if it's positive
+                if damage > 0: # N'appliquez des dégâts que s'ils sont positifs.
                     player.health -= damage
                     son_degat=pygame.mixer.Sound("sons/degat_joueur.mp3")
                     son_degat.play()
                     player.health = max(0, player.health)
-                    player.invincible_time = 60 # Standard invincibility
+                    player.invincible_time = 60 # Invincibilité standard
 
                     # Si c'est un joueur distant, envoyer les mises à jour d'état via le réseau
                     # Vérifier si on est en multijoueur et qu'il existe une fonction pour envoyer des données
                     if hasattr(self, 'p2p_comm') and self.p2p_comm and hasattr(self.p2p_comm, 'envoyer_donnees'):
                         is_server = getattr(self.p2p_comm, 'est_serveur', True)
 
-                        # Determine which player got hit based on reference comparison
+                        # Déterminez quel joueur a été touché en fonction de la comparaison de référence.
                         if hasattr(self, 'second_player') and self.second_player == player:
-                            # Player 2 (controlled by client) was hit
+                            # Le joueur 2 (contrôlé par le client) a été touché
                             if is_server:
                                 self.p2p_comm.envoyer_donnees({
                                     'type': 'damage_update',
                                     'player2_health': player.health,
                                     'player2_invincible_time': player.invincible_time
-                                    # Include stun if laser could stun
+                                    # Inclure un étourdissement si le laser peut étourdir
                                 })
                         else:
-                            # Player 1 (controlled by server/host) was hit
+                            # Le joueur 1 (contrôlé par le serveur/hôte) a été touché.
                             if not is_server:
                                 self.p2p_comm.envoyer_donnees({
                                     'type': 'damage_update',
                                     'player1_health': player.health,
                                     'player1_invincible_time': player.invincible_time
-                                    # Include stun if laser could stun
+                                    # Inclure un étourdissement si le laser peut étourdir
                                 })
                                 return True  # Collision détectée
 
         return False  # Pas de collision
 
     def check_collision(self, player):
-        # First check regular collision (from parent class)
+        # Vérifiez d'abord la collision régulière (de la classe parente)
         collision = super().check_collision(player)
 
-        # Then check laser collisions
+        # Puis vérifiez les collisions laser
         laser_collision = self.check_laser_collision(player)
 
         return collision or laser_collision
@@ -668,7 +668,7 @@ class Tank_Boss(Enemy):
 
         self.healthbar=True
 
-        # Load image
+        # Charger image
         image_path = 'images/boss_rouge.png' 
         loaded_image = pygame.image.load(image_path).convert_alpha()
         size = (self.radius * 2, self.radius * 2)
@@ -676,8 +676,8 @@ class Tank_Boss(Enemy):
     
         loaded_proj_image = pygame.image.load('images/projectile_boss1.png').convert_alpha()
         size = ( 80, 40)
-        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Store original
-        self.proj_image = self.original_proj_image # Keep reference
+        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Magasin original
+        self.proj_image = self.original_proj_image # Conservez la référence
 
 
     def update(self, player):
@@ -718,7 +718,7 @@ class Tank_Boss(Enemy):
                             )
                     self.shoot_cooldown = 180  #3sec
 
-        # Update projectiles
+        # Mettre à jour les projectiles
         for proj in self.projectiles[:]:
             proj['x'] += proj['speed'] * math.cos(proj['angle'])
             proj['y'] -= proj['speed'] * math.sin(proj['angle'])
@@ -740,7 +740,7 @@ class Tank_Boss(Enemy):
                     son_degat.play()
                     player.invincible_time = 60
                     self.projectiles.remove(proj)
-                    continue  # Added to avoid checking second player for removed projectile
+                    continue  # Ajouté pour éviter de vérifier le deuxième joueur pour le projectile retiré
 
             # Vérifier la collision avec le second joueur en multijoueur
             if hasattr(self, 'second_player') and self.second_player and not self.second_player.invincible_time > 0:
@@ -763,13 +763,13 @@ class Tank_Boss(Enemy):
                         })
 
     def draw(self, window):
-        # Draw enemy
+        # dessiner enemy
         super().draw(window)
 
-        # Draw projectiles
+        # Dessiner les projectiles
         for proj in self.projectiles:
             angle = math.degrees(proj['angle'])
-            rotated_proj_image = pygame.transform.rotate(self.original_proj_image, angle) # Adjust angle offset if needed
+            rotated_proj_image = pygame.transform.rotate(self.original_proj_image, angle) # Ajustez l'offset d'angle si nécessaire
             new_rect = rotated_proj_image.get_rect(center=(int(proj['x']), int(proj['y'])))
             window.blit(rotated_proj_image, new_rect)
 
@@ -784,7 +784,7 @@ class Dash_Boss(Enemy):
         self.color = YELLOW
         self.type= [Dash_Boss]
         self.bossname= "BERSERKER"
-        self.angle = 0 # Initialize angle
+        self.angle = 0 # Initialiser angle
 
         self.healthbar=True
         self.projectiles = []
@@ -798,16 +798,16 @@ class Dash_Boss(Enemy):
         self.STOP_EVENT = pygame.USEREVENT + 2
         self.SHOOT_EVENT = pygame.USEREVENT + 3
 
-        # Load image
+        # Charger image
         image_path = 'images/boss_jaune.png'
         loaded_image = pygame.image.load(image_path).convert_alpha()
         size = (self.radius * 2, self.radius * 2)
-        self.original_image = pygame.transform.scale(loaded_image, size) # Store original
-        self.image = self.original_image # Keep reference
+        self.original_image = pygame.transform.scale(loaded_image, size) # Magasin original
+        self.image = self.original_image # Prendre reference
 
         loaded_proj_image = pygame.image.load('images/projectile_stun.png').convert_alpha()
         size = ( 80, 80)
-        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Store original
+        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # magasin original
 
 
     def move_towards_action(self, player):
@@ -823,18 +823,18 @@ class Dash_Boss(Enemy):
                 self.y += dy_norm * self.speed
 
     def shoot_at_player(self, player):
-        # Angle is already calculated in update
+        # L'angle est déjà calculé dans la mise à jour.
         self.projectiles.append({
                 'x': self.x,
                 'y': self.y,
-                'angle': math.radians(self.angle), # Use pre-calculated angle
+                'angle': math.radians(self.angle), # Utilisez l'angle pré-calculé
                 'speed': 10,
                 'radius': 50})
         son_stun = pygame.mixer.Sound("sons/stun.mp3")
         son_stun.play()
 
     def update(self, player):
-        # Always calculate angle towards player
+        # Toujours calculer l'angle vers le joueur
         dx_player = player.rect.centerx - self.x
         dy_player = player.rect.centery - self.y
         self.angle = math.degrees(math.atan2(-dy_player, dx_player))
@@ -870,7 +870,7 @@ class Dash_Boss(Enemy):
             # Hors de l'ecran
             if (proj['x'] < -50 or proj['x'] > WIDTH + 50 or
                 proj['y'] < -50 or proj['y'] > HEIGHT + 50):
-                if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
+                if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
                 continue
 
             # collision au joueur en ignorant sa periode d'invincibilité
@@ -882,8 +882,8 @@ class Dash_Boss(Enemy):
                 player.velocite_gauche=0
                 player.velocite_droite=0  
                 player.velocite_haut=0 
-                if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
-                continue  # Added to avoid checking second player for removed projectile
+                if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
+                continue  # Ajouté pour éviter de vérifier le deuxième joueur pour le projectile retiré
 
             # Vérifier la collision avec le second joueur en multijoueur
             if hasattr(self, 'second_player') and self.second_player:
@@ -891,23 +891,23 @@ class Dash_Boss(Enemy):
                                self.second_player.rect.centery - proj['y'])
                 if dist < proj['radius'] + 20:
                     self.second_player.stun_timer = 120
-                    if proj in self.projectiles: self.projectiles.remove(proj) # Safe remove
+                    if proj in self.projectiles: self.projectiles.remove(proj) # Retrait en toute sécurité
                     # Envoyer l'update au client (Server only)
                     if hasattr(self, 'p2p_comm') and self.p2p_comm and getattr(self.p2p_comm, 'est_serveur', False):
                         self.p2p_comm.envoyer_donnees({
                             'type': 'damage_update',
                             'player2_health': self.second_player.health,
                             'player2_invincible_time': 60, # Le Dash_Boss ne change pas la vie, mais on envoie l'invincibilité
-                            'player2_stun_timer': self.second_player.stun_timer # Add stun timer
+                            'player2_stun_timer': self.second_player.stun_timer # Ajouter un minuteur d'étourdissement
                         })
-                    continue # Ensure we continue if projectile was removed
+                    continue # Assurez-vous que nous continuons si le projectile a été retiré.
 
     def draw(self, window):
-        # Rotate the original image for drawing
-        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Adjust angle offset if needed
+        # Faire pivoter l'image originale pour dessiner
+        rotated_image = pygame.transform.rotate(self.original_image, self.angle) # Ajustez l'offset d'angle si nécessaire
         new_rect = rotated_image.get_rect(center=(int(self.x), int(self.y)))
         window.blit(rotated_image, new_rect)
-        # Draw health bar (logic copied from base class draw)
+        # Dessiner la barre de vie (logique copiée de la classe de base dessiner)
         if hasattr(self, 'healthbar') and self.healthbar and hasattr(self, 'maxhealth'):
             health_ratio = 0
             if self.maxhealth > 0: health_ratio = self.health / self.maxhealth
@@ -923,7 +923,7 @@ class Dash_Boss(Enemy):
                 tag_rect = bosstag.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
                 window.blit(bosstag, tag_rect)
 
-        # Draw projectiles
+        # Desssiner les projectiles
         for proj in self.projectiles:
             new_rect = self.original_proj_image.get_rect(center=(int(proj['x']), int(proj['y'])))
             window.blit(self.original_proj_image, new_rect)
@@ -948,7 +948,7 @@ class Laser_Boss(Enemy):
 
         self.healthbar=True
 
-        # Load image
+        # Charger l'image
         image_path = 'images/boss_laser.png' 
 
         loaded_image = pygame.image.load(image_path).convert_alpha()
@@ -957,7 +957,7 @@ class Laser_Boss(Enemy):
 
         loaded_proj_image = pygame.image.load('images/projectile_laser.png').convert_alpha()
         size = ( 50, 50)
-        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Store original
+        self.original_proj_image = pygame.transform.scale(loaded_proj_image, size) # Magasin original
 
     def update(self, player):
         dx = self.target_x - self.x
