@@ -162,7 +162,7 @@ class P2PCommunication:
                         local_skin_info_copy[key] = value
             else:
                 print(f"  Format de skin local invalide: {type(self.local_skin_info)}")
-                local_skin_info_copy = {"name": "Vaisseau Basique"}
+                local_skin_info_copy = {"name": "Basic Ship"}
 
             # info du skin local
             try:
