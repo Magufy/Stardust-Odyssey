@@ -978,12 +978,12 @@ class Shop:
         self.card_height = (usable_height - (self.grid_size[1] + 1) * self.padding) // self.grid_size[1]
 
         self.skins = [
-            {"name": "Vaisseau Basique", "price": "gratuit", "unlocked": True, "couleur_vaisseau": BLUE},
-            {"name": "Vaisseau Cristal", "price": 100, "unlocked": False, "couleur_vaisseau": (100, 150, 205)},
-            {"name": "Vaisseau Améthyste", "price": 300, "unlocked": False, "couleur_vaisseau": (150,0,150)},
-            {"name": "Vaisseau Plasma", "price": 250, "unlocked": False, "couleur_vaisseau": (205, 50, 205)},
-            {"name": "Vaisseau Emeraude", "price": "PUB","unlocked":False,"couleur_vaisseau": (0,205,0)},
-            {"name": "Vaisseau Diamant", "price": 400, "unlocked": False, "couleur_vaisseau": (0,205,205)}]
+            {"name": "Basic Ship", "price": "gratuit", "unlocked": True, "couleur_vaisseau": (11,11,70),"description":"clasic ship"},
+            {"name": "Cristal Ship", "price": 100, "unlocked": False, "couleur_vaisseau": (20, 25, 35),"description":"tanky ship"},
+            {"name": "Amethyst Ship", "price": 300, "unlocked": False, "couleur_vaisseau": (75,0,75),"description":"fast ship"},
+            {"name": "Plasma Ship", "price": 250, "unlocked": False, "couleur_vaisseau": (125, 25, 125),"description":"railgun ship"},
+            {"name": "Emerald Ship", "price": "PUB","unlocked":False,"couleur_vaisseau": (0,45,0),"description":"bullet bounces"},
+            {"name": "Diamond Ship", "price": 400, "unlocked": False, "couleur_vaisseau": (0,45,45),"description":"explosions"}]
         
 
         # Appliquer les skins débloqués chargés depuis le json
@@ -1054,6 +1054,10 @@ class Shop:
         name_text = self.font.render(skin["name"], True, WHITE)
         name_rect = name_text.get_rect(center=(card_rect.centerx, preview_rect_bg.bottom + 30))
         surface.blit(name_text, name_rect)
+
+        description_text = self.font.render(skin["description"], True, (200,200,200))
+        description_rect = description_text.get_rect(center=(card_rect.centerx, preview_rect_bg.bottom + 60))
+        surface.blit(description_text, description_rect)
 
         if skin["unlocked"]:
             button_text = "ÉQUIPÉ" if self.selected_skin == skin else "SÉLECTIONNER"
