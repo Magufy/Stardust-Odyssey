@@ -64,7 +64,7 @@ all_upgrades = [
     {"name": "Bullet Size", "id": "bullet_size_up", "effect": "Bullet Size +2","niveau":0,"niveaumax":5,"image":"images/upgrades/13_bullet_size.png",
      "apply": lambda p: setattr(p, "bullet_size", p.bullet_size + 2)},
 
-    {"name": "Explosion", "id": "explosion_up", "effect": "Explosion Radius +10","niveau":0,"niveaumax":5,"image":"images/upgrades/14_explosion.png",
+    {"name": "Explosion", "id": "explosion_up", "effect": "Explosion Radius +20","niveau":0,"niveaumax":5,"image":"images/upgrades/14_explosion.png",
      "apply": lambda p: setattr(p, "explosion_radius", p.explosion_radius + 80 if p.explosion_radius==0 else p.explosion_radius + 20) },
 
     {"name": "Range Up", "id": "range_up", "effect": "Bullet Range +100","niveau":0,"niveaumax":5,"image":"images/upgrades/15_range_up.png",
@@ -76,7 +76,7 @@ all_upgrades = [
     {"name": "Forcefield", "id": "forcefield_up", "effect": "Forcefield Damage +2/s","niveau":0,"niveaumax":5,"image":"images/upgrades/17_forcefield.png",
      "apply": lambda p: setattr(p, "forcefield_damage", p.forcefield_damage + 2)},
 
-    {"name": "Decoy", "id": "decoy_up", "effect": "Double Attack Speed, Half Damage","niveau":0,"niveaumax":3, "image":"images/upgrades/18_decoy.png",
+    {"name": "Bullet Storm", "id": "decoy_up", "effect": "Double Attack Speed, -5 Damages","niveau":0,"niveaumax":3, "image":"images/upgrades/18_decoy.png",
      "apply": lambda p: [setattr(p, "reload_speed", p.reload_speed + 0.4), setattr(p, "damage", max(1,p.damage-5))]},
 
     {"name": "Berserker", "id": "berserker_up", "effect": "Damage scales with missing health","niveau":0,"niveaumax":1,"image":"images/upgrades/19_berserker.png", # Non-stackable
@@ -88,10 +88,10 @@ all_upgrades = [
     {"name": "Light speed ability", "id": "light_speed_up", "effect": "unlock lightspeed ability  [1]","niveau":0,"niveaumax":1,"image":"images/upgrades/21_light_speed.png",
      "apply": lambda p: setattr(p, "light_speed_available", True)},
 
-    {"name": "Invulnerability", "id": "invulnerability_up", "effect": "unlock invulnerability  [2]","niveau":0,"niveaumax":1,"image":"images/upgrades/22_invulnerability.png",
+    {"name": "Invulnerability ability", "id": "invulnerability_up", "effect": "unlock invulnerability  [2]","niveau":0,"niveaumax":1,"image":"images/upgrades/22_invulnerability.png",
      "apply": lambda p: setattr(p, "invulnerability_available", True)},
 
-    {"name": "Charged_shots", "id": "charge_up", "effect": "charge your shots, the next 5 shots are critical  [3]","niveau":0,"niveaumax":1,"image":"images/upgrades/23_charge_shot.png",
+    {"name": "Charged_shots ability", "id": "charge_up", "effect": "charge your shots, the next 5 shots are critical  [3]","niveau":0,"niveaumax":1,"image":"images/upgrades/23_charge_shot.png",
      "apply": lambda p: setattr(p, "charged_shots_available", True)},
 ]
 game_upgrades=all_upgrades 
