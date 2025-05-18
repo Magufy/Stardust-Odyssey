@@ -32,8 +32,6 @@ class Button:
         text_surface = self.font.render(self.text, True, color2)
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
-        if self.is_hovered:
-            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
 
     def handle_event(self, event):
         # Gère les événements liés à la souris et les boutons
