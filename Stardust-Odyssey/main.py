@@ -6,8 +6,9 @@ pygame.init()
 
 # Paramètres de la fenêtre en plein écran
 window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-WIDTH, HEIGHT = window.get_size()
 pygame.display.set_caption("Stardust Odyssey")
+icone=pygame.image.load("images/icone_stardust.png")
+pygame.display.set_icon(pygame.transform.scale(icone,(32,32)))
 
-
-Shop().run(window)
+shop = Shop()
+shop.run(window)
