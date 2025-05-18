@@ -347,7 +347,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                         if not upgrade_result: # par exemple, si l'hote quitte le jeu
                             running = False
                             # affiche le game over au 2eme joueur
-                        else
+                        else:
                             wave_text_timer = 120 # affichage de la vague
                             wave_in_progress = False # temps qu'il n'y a pas d'enemis
 
@@ -601,7 +601,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                 result = spawn_wave(wave_number)
                 enemies = result[0]
                 if len(enemies) > 0:
-                    wave_in_progress = True # Set flag for the new wave
+                    wave_in_progress = True # flag pour l vague en cours
                 
                 # Déterminer le type de musique en fonction du numéro de vague
                 cycle_wave = wave_number % 20
@@ -616,16 +616,12 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                     print(f"[DEBUG] Server: Envoi du type de musique '{music_type}' au client.")
 
                 # Configure new enemies for multijoueur (server only)
-                if p2p and is_server: # Check is_server again for clarity
+                if p2p and is_server: # si serveur
                     for enemy in enemies:
                         enemy.p2p_comm = p2p
-                        # Pass the remote ship reference to enemies that need it
+                        # info du remote_ship pour les enemis
                         if isinstance(enemy, (ShooterEnemy, LinkEnemy, Tank_Boss, Dash_Boss, Laser_Boss, Mothership_Boss)) and remote_ship:
                             enemy.second_player = remote_ship
-            # --- End of Server/SP Wave End Logic ---
-
-        # Client does NOT automatically enter shop based on len(enemies) == 0.
-        # It waits for the 'start_upgrade_phase' message (handled in network processing).
 
         clock.tick(60)
         pygame.display.flip()
@@ -650,14 +646,14 @@ def update_bullets(ship, enemies, damage_manager=None):
     for bullet in ship.bullets[:]:
         bullet.move()
 
-        # Range check
+        # check la portée
         if bullet.distance_traveled >= bullet.max_range:
             bullet.explode(enemies, damage_manager)
             if bullet in ship.bullets:
                 ship.bullets.remove(bullet)
             continue
 
-        # Wall collision
+        # collision aux murs
         wall_collided = False
         if bullet.x - bullet.radius < 0 or bullet.x + bullet.radius > WIDTH:
             if bullet.wall_bounces > 0:
@@ -678,8 +674,8 @@ def update_bullets(ship, enemies, damage_manager=None):
                 ship.bullets.remove(bullet)
             continue
 
-        # Enemy collision
-        enemies_hit_this_step = set()  # Track enemies hit in this specific step/frame
+        # collisions aux ennemis
+        enemies_hit_this_step = set()
 
         for enemy in enemies[:]:
             # Skip enemies already hit by this bullet (if no piercing/bounces left)
@@ -783,7 +779,7 @@ def show_game_over(score):
     menu_music.set_volume(0.4)  # Volume à 40%
     menu_music.play(loops=-1)  # Boucle infinie
 
-def create_enemy_from_data(enemy_data):
+def create_enemy_from_data(enemy_data): #crée les enemis
     enemy_type = enemy_data.get('type', '')
 
     if enemy_type == 'BasicEnemy':
@@ -811,7 +807,7 @@ def create_enemy_from_data(enemy_data):
         enemy.x = enemy_data.get('x', enemy.x)
         enemy.y = enemy_data.get('y', enemy.y)
         enemy.health = enemy_data.get('health', enemy.health)
-        enemy.angle = enemy_data.get('angle', getattr(enemy, 'angle', 0)) # *** UPDATE ANGLE HERE ***
+        enemy.angle = enemy_data.get('angle', getattr(enemy, 'angle', 0))
 
         # Gérer les propriétés spécifiques aux types d'ennemis (Shooter/Link)
         if isinstance(enemy, (ShooterEnemy, LinkEnemy)):
@@ -824,7 +820,7 @@ def create_enemy_from_data(enemy_data):
             if isinstance(enemy, LinkEnemy) and 'active_lasers' in enemy_data:
                 enemy.active_lasers = enemy_data.get('active_lasers', [])
 
-        # Projectiles for all enemy types that have them (Moved outside the specific if)
+        # pour tous les ennemis qui ont des projectiles
         if hasattr(enemy, 'projectiles'):
             enemy.projectiles = enemy_data.get('projectiles', [])
 
@@ -920,7 +916,7 @@ class Shop:
         self.connexion_reussie = False
         self.p2p = None
         self.remote_skin_info = None # stock les infos du skin du joueur 2
-        self.server_ip = ""  # To store the server IP for display
+        self.server_ip = ""  # ip du serveur pour l'affichage
         self.font = pygame.font.Font(None, 36)
 
         # Initialiser les variables pour la gestion des vidéos
@@ -928,11 +924,11 @@ class Shop:
         self.video_path = "images/video-menu.mp4"  # Chemin par défaut
         self.cap = None  # Sera initialisé lors du premier affichage
 
-        # Play menu music when initializing the shop
-        pygame.mixer.stop()  # Stop any currently playing music
+        # musique 
+        pygame.mixer.stop()  # arrete la musique en cours
         self.menu_music = pygame.mixer.Sound("sons/menu.mp3")
-        self.menu_music.set_volume(0.4)  # Set volume to 40%
-        self.menu_music.play(loops=-1)  # -1 means loop indefinitely
+        self.menu_music.set_volume(0.4)  # volume à 40%
+        self.menu_music.play(loops=-1)  # -1 = boucle infinie
 
         self.grid_size = (3, 2)
         self.margin = 50
@@ -943,6 +939,7 @@ class Shop:
         self.card_width = (usable_width - (self.grid_size[0] + 1) * self.padding) // self.grid_size[0]
         self.card_height = (usable_height - (self.grid_size[1] + 1) * self.padding) // self.grid_size[1]
 
+        #vaisseaux du chop
         self.skins = [
             {"name": "Basic Ship", "price": "gratuit", "unlocked": True, "couleur_vaisseau": (11,11,70),"description":"clasic ship"},
             {"name": "Cristal Ship", "price": 100, "unlocked": False, "couleur_vaisseau": (20, 25, 35),"description":"tanky ship"},
@@ -958,6 +955,7 @@ class Shop:
                 if skin["name"] == unlocked_skin["name"]:
                     skin["unlocked"] = unlocked_skin["unlocked"]
 
+        #boutons
         self.buttons = {
             "play": Button(WIDTH // 2 - 83, HEIGHT*0.795 - 25, 162*WIDTH//1536, 49*HEIGHT//864, ""), 
             "shop": Button(WIDTH // 2 - 72, HEIGHT*0.857 - 25, 141*WIDTH//1536, 40*HEIGHT//864, ""),  
@@ -995,28 +993,26 @@ class Shop:
         card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
         pygame.draw.rect(surface, GRAY, card_rect, border_radius=15)
 
-        # --- Preview Area --- 
+        # vaisseaux dans le shop
         preview_area_size = min(self.card_width * 0.8, self.card_height * 0.4) # Adjust size as needed
         preview_rect_bg = pygame.Rect(x + (self.card_width - preview_area_size) // 2, y + 20, preview_area_size, preview_area_size)
         pygame.draw.rect(surface, skin_color, preview_rect_bg, border_radius=5) # Background for preview
 
-        # --- Get Ship Image --- 
-
-        # Use creer_vaisseau to get the appropriate ship instance
+        # creer_vaisseau pour avoir l'image
         temp_ship = creer_vaisseau(skin,damage_manager=DamageNumberManager()) 
-        ship_image = temp_ship.original_image # Use the original image before rotation
+        ship_image = temp_ship.original_image # image originale
             
         img_rect = ship_image.get_rect()
         scale = min(preview_area_size / img_rect.width, preview_area_size / img_rect.height) 
-        scaled_width = int(img_rect.width * scale * 0.8) # Apply extra scaling if needed
+        scaled_width = int(img_rect.width * scale * 0.8)
         scaled_height = int(img_rect.height * scale * 0.8)
         scaled_image = pygame.transform.scale(ship_image, (scaled_width, scaled_height))
                 
-        # Center the scaled image within the preview background rect
+        # image centrée
         blit_rect = scaled_image.get_rect(center=preview_rect_bg.center)
         surface.blit(scaled_image, blit_rect)
 
-        # --- Text and Button --- 
+        # texte de bouttons
         name_text = self.font.render(skin["name"], True, WHITE)
         name_rect = name_text.get_rect(center=(card_rect.centerx, preview_rect_bg.bottom + 30))
         surface.blit(name_text, name_rect)
@@ -1030,7 +1026,7 @@ class Shop:
             button_color = GREEN if self.selected_skin == skin else BLUE
         else:
             button_text = f"{skin['price']} Credits"
-            button_color = RED if self.credits < skin["price"] else YELLOW
+            button_color = RED if self.credits < int(skin["price"]) else YELLOW
 
         button_rect = pygame.Rect(x + 10, y + self.card_height - 40, self.card_width - 20, 30)
         pygame.draw.rect(surface, button_color, button_rect, border_radius=5)
@@ -1068,12 +1064,11 @@ class Shop:
 
     def run(self, screen):
         running = True
-        # Initialize network status variables
         network_status = ""
         network_color = WHITE
 
         while running:
-            # Reset network status for this frame
+            # reset le network_status
             network_status = ""
             network_color = WHITE
 
@@ -1093,7 +1088,7 @@ class Shop:
                 # Supprimer le message d'attente
                 network_status = ""
 
-            # Event handling
+            # envents :
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -1106,7 +1101,7 @@ class Shop:
                         self.current_screen = "play_menu"
                     elif self.buttons["quit"].handle_event(event):
                         pygame.quit()
-                        return  # Exit the function
+                        return  # sort de la fonction
 
                 # Gestion du menu de choix de mode
                 elif self.current_screen == "play_menu":
@@ -1114,7 +1109,7 @@ class Shop:
                         game_loop(self.selected_skin, self)  # Mode solo
                     elif self.buttons["multiplayer"].handle_event(event):
                         self.current_screen = "multiplayer_menu"
-                        # Initialize multijoueur attributes if they don't exist
+                        #Initialise l'attribut multijoueur
                         if not hasattr(self, 'entering_ip'):
                             self.entering_ip = False
                         if not hasattr(self, 'connexion_reussie'):
@@ -1139,29 +1134,21 @@ class Shop:
                         self.server_ip = get_local_ip()
                         self.current_screen = "create_room_screen"
                         
-                        if not self.p2p:  # Prevent creating multiple instances
-                            # Start server in a thread to avoid blocking UI
+                        if not self.p2p:  #pour ne pas en creer plusieurs
                             def start_server():
                                 print("  Démarrage de la fonction start_server")
                                 try:
-                                    print(f"  Création du P2PCommunication avec skin: {self.selected_skin}")
                                     self.p2p = P2PCommunication(est_serveur=True, local_skin_info=self.selected_skin)
-                                    print("  Appel de initialiser()")
                                     if self.p2p.initialiser():
-                                        print("  Initialisation serveur réussie")
                                         if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
-                                            print(f"  Skin distant reçu: {self.p2p.remote_skin_info}")
-                                            self.remote_skin_info = self.p2p.remote_skin_info  # Store remote skin
-                                            self.connexion_reussie = True  # Only set to True when we have remote skin info
+                                            self.remote_skin_info = self.p2p.remote_skin_info  # infos du remote_skin
+                                            self.connexion_reussie = True  # True quand les infos de l'autre joueur sont recues
                                         else:
-                                            print("  Aucun skin distant reçu")
                                             self.connexion_reussie = False
                                     else:
-                                        print("  Échec de l'initialisation du serveur")
-                                        self.p2p = None  # Clear p2p instance on failure
+                                        self.p2p = None  # reset p2p si erreur
                                         self.connexion_reussie = False
                                 except Exception as e:
-                                    print(f"  Exception dans start_server: {e}")
                                     if hasattr(self, 'p2p') and self.p2p:
                                         self.p2p = None
                                     self.connexion_reussie = False
@@ -1169,37 +1156,36 @@ class Shop:
                             threading.Thread(target=start_server, daemon=True).start()
 
                     elif "join_room" in self.buttons and self.buttons["join_room"].handle_event(event):
-                        if not self.p2p:  # Only allow joining if not already connected/hosting
+                        if not self.p2p:  # qui si pas déjâ connecté
                             self.entering_ip = True
-                            # Make sure input_box exists
+                            # si input_box existe bien
                             if not hasattr(self, 'input_box'):
                                 self.input_box = InputBox(WIDTH // 2 - 100, HEIGHT // 2, 200, 32)
                             self.current_screen = "join_room_screen"
 
                     elif "enter" in self.buttons and self.buttons["enter"].handle_event(event) and self.entering_ip:
-                        if not self.p2p and hasattr(self, 'input_box'):  # Prevent multiple instances
-                            # Start client in a thread
+                        if not self.p2p and hasattr(self, 'input_box'):  # pour ne pas en vaoir plusieurs
+                            # lance le client
                             def start_client():
                                 self.p2p = P2PCommunication(est_serveur=False, ip_hote=self.input_box.text.strip(), local_skin_info=self.selected_skin)
                                 if self.p2p.initialiser():
-                                    print("Client connecté et skin échangé.")
                                     if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
-                                        self.remote_skin_info = self.p2p.remote_skin_info  # Store remote skin
-                                        self.connexion_reussie = True  # Only set to True when we have remote skin info
+                                        self.remote_skin_info = self.p2p.remote_skin_info  # stock le remote skin
+                                        self.connexion_reussie = True  # true quand les infos sont recues
                                     else:
                                         self.connexion_reussie = False
                                 else:
                                     print("Échec de la connexion client ou de l'échange de skin.")
                                     self.p2p = None
                                     self.connexion_reussie = False
-                                # Reset entering_ip regardless of success/failure after attempt
+                                # Reset entering_ip
                                 self.entering_ip = False
 
                             threading.Thread(target=start_client, daemon=True).start()
 
 
                     elif "back" in self.buttons and self.buttons["back"].handle_event(event):
-                        if self.p2p:  # If backing out, close connection
+                        if self.p2p:  # ferme la connection si back est appuyé
                             self.p2p.fermer()
                             self.p2p = None
                         self.current_screen = "play_menu"
@@ -1210,7 +1196,7 @@ class Shop:
                 # Gestion de l'écran de création de room
                 elif self.current_screen == "create_room_screen":
                     if "back" in self.buttons and self.buttons["back"].handle_event(event):
-                        if self.p2p:  # If backing out, close connection
+                        if self.p2p:  # ferme la connection si back est appuyé
                             self.p2p.fermer()
                             self.p2p = None
                         self.current_screen = "multiplayer_menu"
@@ -1219,23 +1205,21 @@ class Shop:
                         self.remote_skin_info = None
                     # Gestion du bouton jouer dans l'écran create_room_screen
                     elif "jouer" in self.buttons and self.buttons["jouer"].handle_event(event) and hasattr(self, 'connexion_reussie') and self.connexion_reussie and self.p2p:
-                        print("Bouton jouer cliqué dans create_room_screen")
-                        # Launch game, passing both local and remote skin info
-                        current_p2p = self.p2p  # Store current p2p instance
-                        self.p2p = None  # Reset shop's p2p reference
-                        self.connexion_reussie = False  # Reset flag
+                        # lance le jeu
+                        current_p2p = self.p2p  # Stock p2p
+                        self.p2p = None  # Reset le p2p du shop
+                        self.connexion_reussie = False  # Reset le flag
                         game_loop(self.selected_skin, self, current_p2p, self.remote_skin_info)
-                        # After game_loop returns, we are back in the shop menu
-                        # Ensure p2p is closed if game_loop exits unexpectedly
+                        # ferme p2p
                         if current_p2p and current_p2p.running:
                             current_p2p.fermer()
-                        self.remote_skin_info = None  # Clear remote skin info
-                        self.current_screen = "menu"  # Return to main menu after game
+                        self.remote_skin_info = None  # Clear les infos du remote skin
+                        self.current_screen = "menu"  # retourne au main menu
                         
                 # Gestion de l'écran de rejoindre une room
                 elif self.current_screen == "join_room_screen":
                     if "back" in self.buttons and self.buttons["back"].handle_event(event):
-                        if self.p2p:  # If backing out, close connection
+                        if self.p2p:  # ferme la connection si back est appuyé
                             self.p2p.fermer()
                             self.p2p = None
                         self.current_screen = "multiplayer_menu"
@@ -1244,39 +1228,32 @@ class Shop:
                         self.remote_skin_info = None
                     # Gestion du bouton enter pour se connecter au serveur
                     elif "enter" in self.buttons and self.buttons["enter"].handle_event(event) and hasattr(self, 'input_box'):
-                        print(f"Tentative de connexion à l'IP: {self.input_box.text.strip()}")
-                        if not self.p2p:  # Prevent multiple instances
-                            # Start client in a thread
+                        if not self.p2p:  # empeche les connexions multiples
+                            # lance le client
                             def start_client():
                                 self.p2p = P2PCommunication(est_serveur=False, ip_hote=self.input_box.text.strip(), local_skin_info=self.selected_skin)
                                 if self.p2p.initialiser():
-                                    print("Client connecté et skin échangé.")
                                     if hasattr(self.p2p, 'remote_skin_info') and self.p2p.remote_skin_info:
-                                        self.remote_skin_info = self.p2p.remote_skin_info  # Store remote skin
-                                        self.connexion_reussie = True  # Only set to True when we have remote skin info
+                                        self.remote_skin_info = self.p2p.remote_skin_info  # stock les infos du skin remote
+                                        self.connexion_reussie = True  # true si les infos sont recues
                                     else:
-                                        print("Connexion établie mais pas de skin distant reçu")
                                         self.connexion_reussie = True  # On considère quand même la connexion comme réussie
                                 else:
-                                    print("Échec de la connexion client ou de l'échange de skin.")
                                     self.p2p = None
                                     self.connexion_reussie = False
 
                             threading.Thread(target=start_client, daemon=True).start()
                     # Gestion du bouton jouer dans l'écran join_room_screen
                     elif "jouer" in self.buttons and self.buttons["jouer"].handle_event(event) and hasattr(self, 'connexion_reussie') and self.connexion_reussie and self.p2p:
-                        print("Bouton jouer cliqué dans join_room_screen")
-                        # Launch game, passing both local and remote skin info
-                        current_p2p = self.p2p  # Store current p2p instance
-                        self.p2p = None  # Reset shop's p2p reference
-                        self.connexion_reussie = False  # Reset flag
+                        # lance le jeu avec les infos du remote
+                        current_p2p = self.p2p  # stock l'instance de p2p
+                        self.p2p = None  # Reset p2p du shop
+                        self.connexion_reussie = False  # Reset le flag
                         game_loop(self.selected_skin, self, current_p2p, self.remote_skin_info)
-                        # After game_loop returns, we are back in the shop menu
-                        # Ensure p2p is closed if game_loop exits unexpectedly
                         if current_p2p and current_p2p.running:
                             current_p2p.fermer()
-                        self.remote_skin_info = None  # Clear remote skin info
-                        self.current_screen = "menu"  # Return to main menu after game
+                        self.remote_skin_info = None  # Clear les infos de remote skin
+                        self.current_screen = "menu"  # Retourn au main menu quand fini
 
                 # Gestion du shop
                 elif self.current_screen == "shop":
@@ -1298,7 +1275,7 @@ class Shop:
                 if hasattr(self, 'entering_ip') and self.entering_ip and hasattr(self, 'input_box'):
                     self.input_box.handle_event(event)
 
-            # Drawing Logic
+            # ecran noir
             screen.fill(BLACK)
 
             if self.current_screen == "menu":
@@ -1403,7 +1380,6 @@ class Shop:
                     
                     # Vérifier si la vidéo est chargée correctement
                     if not self.cap.isOpened():
-                        print("Erreur lors de l'ouverture de la vidéo multiplayer_menu.")
                         exit()
                 
                 # Lire les images de la vidéo et les afficher
@@ -1413,7 +1389,6 @@ class Shop:
                     self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = self.cap.read()  # Lire la première image après réinitialisation
                     if not ret:  # Si toujours pas de frame, il y a un problème avec la vidéo
-                        print("Impossible de lire la vidéo multiplayer_menu.")
                         frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)  # Créer une image noire
                 
                 # Convertir l'image OpenCV (BGR) en format Pygame (RGB)
@@ -1429,23 +1404,21 @@ class Shop:
                 # Afficher l'image sur la fenêtre Pygame
                 screen.blit(frame_surface, (0, 0))
 
-                # Draw multiplayer menu titles, buttons
-
                 # Draw buttons
                 if "create_room" in self.buttons: self.buttons["create_room"].draw(screen)
                 if "join_room" in self.buttons: self.buttons["join_room"].draw(screen)
                 if "back" in self.buttons: self.buttons["back"].draw(screen)
                 
             elif self.current_screen == "create_room_screen":
-                # Draw create room screen
+                #ecran creer room
                 title = self.font.render("CREATE ROOM", True, WHITE)
                 screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 4))
                 
-                # Display IP address
+                # Display l'adresse ip
                 ip_text = self.font.render(f"IP: {self.server_ip}", True, WHITE)
                 screen.blit(ip_text, (WIDTH // 2 - ip_text.get_width() // 2, HEIGHT // 2 - 50))
                 
-                # Draw back button
+                # bouton back
                 if "back" in self.buttons: self.buttons["back"].draw(screen)
                 
                 # Si la connexion est établie et que nous sommes sur l'écran create_room
@@ -1456,26 +1429,26 @@ class Shop:
                     # Afficher le bouton jouer
                     self.buttons["jouer"].draw(screen)
                 else:
-                    # Display waiting message seulement si pas connecté
+                    #message 'en attente'
                     waiting_text = self.font.render("Waiting for player...", True, WHITE)
                     screen.blit(waiting_text, (WIDTH // 2 - waiting_text.get_width() // 2, HEIGHT // 2))
                 
             elif self.current_screen == "join_room_screen":
-                # Draw join room screen
+                # ecran join room
                 title = self.font.render("JOIN ROOM", True, WHITE)
                 screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 4))
                 
-                # Show IP input box
+                # imput_box pour l'ip
                 if hasattr(self, 'input_box'):
                     ip_prompt = self.font.render("Enter the server's IP:", True, WHITE)
                     screen.blit(ip_prompt, (WIDTH // 2 - ip_prompt.get_width() // 2, HEIGHT // 2 - 50))
                     self.input_box.draw(screen)
                     if "enter" in self.buttons: self.buttons["enter"].draw(screen)
                 
-                # Draw back button
+                # bouton back
                 if "back" in self.buttons: self.buttons["back"].draw(screen)
                 
-                # Show connection status
+                # status de la connexion
                 status_text_surf = self.font.render(network_status, True, network_color)
                 screen.blit(status_text_surf, (WIDTH // 2 - status_text_surf.get_width() // 2, HEIGHT // 2 + 150))
 
@@ -1494,6 +1467,6 @@ class Shop:
 
             pygame.display.flip()
 
-        # Ensure P2P connection is closed if the main loop exits
+        # si main loop existe, s'assure que p2p est fermé
         if hasattr(self, 'p2p') and self.p2p:
             self.p2p.fermer()
