@@ -336,7 +336,6 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                 elif msg_type == 'start_upgrade_phase':
                     # le client recoit le signal d'entrée dans le shop
                     if not is_server:
-                        print("[DEBUG] Client: Received start_upgrade_phase, entering shop_upgrades (waiting state).")
                         enemies.clear() # Clear les enemis
                         window.fill(BLACK) # clear le fond
                         pygame.display.flip() # Update l'affichage
