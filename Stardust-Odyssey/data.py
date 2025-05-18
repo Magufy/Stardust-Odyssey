@@ -22,7 +22,7 @@ def load_data():
         if not os.path.exists("save_data.json"):
             # Si le fichier n'existe pas, créer un fichier avec des valeurs par défaut
             default_data = {
-                "credits": 5000,  # Crédit de départ
+                "credits": 200,  # Crédit de départ
                 "selected_skin": {
                     "name": "Basic Ship",
                     "price": "gratuit",
@@ -62,14 +62,14 @@ def load_data():
 
                 # Retourner les données chargées
                 return (
-                    data.get("credits", 5000),
+                    data.get("credits", 200),
                     selected_skin,
                     skins
                 )
             except json.JSONDecodeError:
                 # Si le fichier est corrompu, réinitialiser avec les données par défaut
                 default_data = {
-                    "credits": 5000,
+                    "credits": 200,
                     "selected_skin": {
                         "name": "Basic Ship",
                         "price": "gratuit",
@@ -91,7 +91,7 @@ def load_data():
         # Affiche une erreur s'il y a un problème inattendu
         print(f"Erreur lors du chargement des données: {e}")
         # Retourner les valeurs par défaut en cas d'erreur
-        return 5000, {
+        return 200, {
             "name": "Basic Ship",
             "price": "gratuit",
             "unlocked": True,
