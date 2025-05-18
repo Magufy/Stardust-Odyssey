@@ -9,6 +9,7 @@ window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 pygame.display.set_caption("Stardust Odyssey")
 icone=pygame.image.load("images/icone_stardust.png")
 pygame.display.set_icon(pygame.transform.scale(icone,(32,32)))
+pygame.mouse.set_cursor(pygame.cursors.diamond)
 
 shop = Shop()
 shop.run(window)
