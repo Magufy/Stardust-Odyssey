@@ -378,9 +378,5 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                 print("Erreur: ID d'amélioration manquant pour l'envoi réseau.")
 
         return True # Upgrade sélectionnée at gérée
-    elif selected_index is None:
-        print("Aucune amélioration sélectionnée (Shop fermé?).")
-        return False  # Indique qu'aucune sélection n'a été faite 
     else:
-        print(f"Erreur: Index sélectionné invalide: {selected_index}")
         return False
