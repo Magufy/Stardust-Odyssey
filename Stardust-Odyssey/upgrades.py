@@ -230,7 +230,7 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
 
     
     # Hébèrge la loupe UI 
-    selection_block_time = time.time() + 2 
+    selection_block_time = time.time() + 0.5 #delai de 0.5s d'entrée dans le shop pour eviter les choix invoulu
     while shop_running:
         window.fill((20, 20, 40))  # Fond bleu foncé
         upgrade_rects.clear()
