@@ -97,7 +97,7 @@ all_upgrades = [
 game_upgrades=all_upgrades 
 
 def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
-    """Affiche les améliorations disponibles et applique celle choisie"""
+    #Affiche les améliorations disponibles et applique celle choisie
    
     # Stop toute music qui est entrain d'etre jouée
     pygame.mixer.stop()
@@ -117,7 +117,6 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
     if p2p and not is_server:
         # Afficher le message d'attente
         font = pygame.font.Font(None, 48)
-        print("[DEBUG] Entrée dans la phase d'attente du choix de l'hôte (client)")
         waiting = True
 
         # Afficher l'écran d'attente
@@ -173,28 +172,21 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                                         # Le serveur gère déjà la synchronisation de la santé
                                         try:
                                             apply_func(player)
-                                            print(f"Client: Amélioration {upgrade_id} appliquée avec succès")
                                         except Exception as e:
                                             print(f"Client: Erreur lors de l'application de l'amélioration {upgrade_id}: {e}")
                                         
                                         # Mettre à jour le niveau localement pour le client
                                         selected_upgrade_config['niveau'] = server_level
-                                        print(f"Client: Applied upgrade {upgrade_id}, new level: {selected_upgrade_config['niveau']}")
-                                else:
-                                    print(f"Client: Skipping already applied upgrade {upgrade_id}, current level: {current_level}, server level: {server_level}")
                                 
                                 waiting = False
                                 # Pas besoin de quitter la boucle interne, waiting=False gère la sortie de la boucle externe
-                            else:
-                                print(f"Erreur: Amélioration reçue inconnue ID: {upgrade_id}")
-                                # Redemander éventuellement au serveur ou gérer l’erreur
                         # Gérer d’autres types de messages si nécessaire à l’avenir
                 except Empty:
                     
                     pass # Pas de message dans la queue, continue d'attendre
 
             #Courte pause pour éviter une utilisation excessive du CPU et permettre l'affichage
-            pygame.time.delay(50)
+            pygame.time.delay(20)
 
         # La musique sera restaurée par le message 'music_update' envoyé par le serveur
         return True # Return True if upgrade was received and applied
