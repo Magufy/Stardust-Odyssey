@@ -348,7 +348,7 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
                             running = False
                             # affiche le game over au 2eme joueur
                         else
-                            wave_text_timer = 120 # affichage de la 
+                            wave_text_timer = 120 # affichage de la vague
                             wave_in_progress = False # temps qu'il n'y a pas d'enemis
 
 
@@ -575,33 +575,27 @@ def game_loop(selected_skin, shop, p2p=None, remote_skin_info=None):
             wave_text_timer -= 1
 
         # logique de fin de vague
-        # Server is the authority on when the wave is truly cleared.
+        # le serveur indique si la vague est finie
         if running and (is_server or not p2p) and len(enemies) == 0 and wave_in_progress:
-            # This block is now primarily for the server or mode solo
+            wave_in_progress = False # fin de la vague
 
-            wave_in_progress = False # Mark wave as ended
-
-            # Server notifies client to start the upgrade waiting phase
+            # le serveur envoie au client que la phase d'upgrade commence
             if p2p and is_server:
-                print("[DEBUG] Server: Wave cleared, sending start_upgrade_phase to client.")
                 p2p.envoyer_donnees({'type': 'start_upgrade_phase'})
-                # Consider a tiny sleep ONLY if network issues observed, usually not needed:
-                # time.sleep(0.05)
 
-            # Server or mode solo enters the shop immediately
-            print("[DEBUG] Server/SP: Entering shop_upgrades.")
+            # le serveur ou le mode solo ouvre le shop
             upgrade_result = shop_upgrades(local_ship, p2p, remote_ship, network_queue)
 
-            if not upgrade_result: # If shop closed prematurely or quit
+            if not upgrade_result: # si le shop a ete quitté sans resultat
                 running = False
                 if p2p and not game_over_sent:
                     p2p.envoyer_donnees({'type': 'game_over'})
                     game_over_sent = True
-                # Main loop condition 'running' will handle exit
+                # la condition 'running' fait le game over
             else:
-                # Upgrade successful, proceed to next wave logic (Server/SP only)
+                # vague suivante
                 wave_number += 1
-                wave_text_timer = 120 # Show wave text timer
+                wave_text_timer = 120 # texte de vague
 
                 print("[DEBUG] Server/SP: Spawning next wave.")
                 result = spawn_wave(wave_number)
