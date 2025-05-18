@@ -186,13 +186,13 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                     pass # Pas de message dans la queue, continue d'attendre
 
             #Courte pause pour éviter une utilisation excessive du CPU et permettre l'affichage
-            pygame.time.delay(20)
+            pygame.time.delay(50)
 
         # La musique sera restaurée par le message 'music_update' envoyé par le serveur
         return True # Return True if upgrade was received and applied
 
     
-    # --- Serveur (hébergeur) ou mode solo ---
+    # Serveur (hébergeur) ou mode solo
    
     # Filtre upgrades qui ne dépassent pas le maximum
     available_for_selection = [upgrade for upgrade in game_upgrades if upgrade.get('niveau', 0) < upgrade['niveaumax']+1]
@@ -229,7 +229,7 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
     upgrade_rects = [] # Store rectangles and their indices
 
     
-    # --- Hébèrge la loupe UI 
+    # Hébèrge la loupe UI 
     selection_block_time = time.time() + 2 
     while shop_running:
         window.fill((20, 20, 40))  # Fond bleu foncé
@@ -356,13 +356,7 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
             if 'niveau' not in original_upgrade_config:
                 original_upgrade_config['niveau'] = 1 # Initialise s'il manque
             original_upgrade_config['niveau'] += 1
-            print(f"Amélioration appliquée localement: {original_upgrade_config['name']} (Niveau {original_upgrade_config['niveau']})")
-        else:
-             print(f"Erreur: Impossible de trouver l'amélioration originale avec ID: {upgrade_id} pour incrémenter le niveau.")
-             
-             # Continue dans tous les cas, mais le niveau ne suit pas correctement
-
-        
+    
         # dans multijoueur (serveur), envoie le choix de l'upgrade au client
         if p2p and is_server:
             if upgrade_id:
@@ -380,7 +374,6 @@ def shop_upgrades(player, p2p=None, player2=None, network_queue=None):
                     'is_health_upgrade': is_health_upgrade,
                     'upgrade_level': original_upgrade_config.get('niveau', 1) if original_upgrade_config else 1
                 })
-                print(f"Amélioration envoyée au client: {upgrade_id} (health: {is_health_upgrade})")
             else:
                 print("Erreur: ID d'amélioration manquant pour l'envoi réseau.")
 
